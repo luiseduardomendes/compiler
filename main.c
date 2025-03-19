@@ -21,10 +21,11 @@ void print_token_normal (char *token);
 void print_token_especial (int token);
 int print_token (int token);
 void incr_counter();
+int G_LINE_COUNTER;
 
 int main (int argc, char **argv) {
   int token = 0, retorno = 0;
-  int G_LINE_COUNTER = 1;
+  G_LINE_COUNTER = 1;
   while (retorno == 0 && (token = yylex())) {
     retorno = print_token(token);
   }
