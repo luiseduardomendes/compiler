@@ -52,4 +52,5 @@ int get_line_number(void) {
 \|                            {return '|';}
 "//".*                        {}
 [ \t\s]                       {}
+.                             {return TK_ER;}
 %%

@@ -4,11 +4,12 @@ int __b = 10;
 float _d__das = 12.5;
 float e__ = .5;
 
-as function[] {
+as function[] 
     int a = 10;
     int b = 20;
     return a + b;
-}
+
+{} // error character
 
 int c; //comment ignored
 //whole line ignored

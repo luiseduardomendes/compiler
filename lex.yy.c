@@ -373,8 +373,8 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
-#define YY_NUM_RULES 39
-#define YY_END_OF_BUFFER 40
+#define YY_NUM_RULES 40
+#define YY_END_OF_BUFFER 41
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -384,7 +384,7 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[77] =
     {   0,
-        0,    0,   40,   39,   38,    1,   20,   23,   35,   30,
+        0,    0,   41,   39,   38,    1,   20,   23,   35,   30,
        31,   21,   24,   33,   25,   13,   22,   14,   34,   26,
        32,   27,   28,   29,   15,   15,   15,   15,   15,   15,
        15,   15,   15,   36,   19,   13,   37,   13,   14,   16,
@@ -495,11 +495,11 @@ static const flex_int16_t yy_chk[125] =
     } ;
 
 /* Table of booleans, true if rule could match eol. */
-static const flex_int32_t yy_rule_can_match_eol[40] =
+static const flex_int32_t yy_rule_can_match_eol[41] =
     {   0,
 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        };
+    0,     };
 
 static yy_state_type yy_last_accepting_state;
 static char *yy_last_accepting_cpos;
@@ -1007,9 +1007,14 @@ YY_RULE_SETUP
 case 39:
 YY_RULE_SETUP
 #line 55 "scanner.l"
+{return TK_ER;}
+	YY_BREAK
+case 40:
+YY_RULE_SETUP
+#line 56 "scanner.l"
 ECHO;
 	YY_BREAK
-#line 1013 "lex.yy.c"
+#line 1018 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2026,6 +2031,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 55 "scanner.l"
+#line 56 "scanner.l"
 
 
