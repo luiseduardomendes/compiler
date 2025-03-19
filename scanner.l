@@ -1,9 +1,20 @@
 %{
 #include <stdio.h>
 #include "tokens.h"
+
+int line_number = 1; 
+
+int get_line_number(void) {
+    return line_number;
+}
 %}
 
+%option noyywrap yylineno
+
 %%
+
+\n                            { line_number++;}
+
 "as"                          {return TK_PR_AS;}
 "declare"                     {return TK_PR_DECLARE;}
 "else"                        {return TK_PR_ELSE;}
@@ -39,7 +50,6 @@
 \;                            {return ';';} 
 \&                            {return '&';} 
 \|                            {return '|';}
-\n                            {return '\n';}
 "//".*                        {}
 [ \t\s]                       {}
 %%

@@ -162,8 +162,27 @@ extern FILE *yyin, *yyout;
 #define EOB_ACT_END_OF_FILE 1
 #define EOB_ACT_LAST_MATCH 2
     
-    #define YY_LESS_LINENO(n)
-    #define YY_LINENO_REWIND_TO(ptr)
+    /* Note: We specifically omit the test for yy_rule_can_match_eol because it requires
+     *       access to the local variable yy_act. Since yyless() is a macro, it would break
+     *       existing scanners that call yyless() from OUTSIDE yylex.
+     *       One obvious solution it to make yy_act a global. I tried that, and saw
+     *       a 5% performance hit in a non-yylineno scanner, because yy_act is
+     *       normally declared as a register variable-- so it is not worth it.
+     */
+    #define  YY_LESS_LINENO(n) \
+            do { \
+                int yyl;\
+                for ( yyl = n; yyl < yyleng; ++yyl )\
+                    if ( yytext[yyl] == '\n' )\
+                        --yylineno;\
+            }while(0)
+    #define YY_LINENO_REWIND_TO(dst) \
+            do {\
+                const char *p;\
+                for ( p = yy_cp-1; p >= (dst); --p)\
+                    if ( *p == '\n' )\
+                        --yylineno;\
+            }while(0)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -322,6 +341,9 @@ void yyfree ( void *  );
 #define YY_AT_BOL() (YY_CURRENT_BUFFER_LVALUE->yy_at_bol)
 
 /* Begin user sect3 */
+
+#define yywrap() (/*CONSTCOND*/1)
+#define YY_SKIP_YYWRAP
 typedef flex_uint8_t YY_CHAR;
 
 FILE *yyin = NULL, *yyout = NULL;
@@ -362,14 +384,14 @@ struct yy_trans_info
 	};
 static const flex_int16_t yy_accept[77] =
     {   0,
-        0,    0,   40,   39,   38,   36,   19,   22,   34,   29,
-       30,   20,   23,   32,   24,   12,   21,   13,   33,   25,
-       31,   26,   27,   28,   14,   14,   14,   14,   14,   14,
-       14,   14,   14,   35,   18,   12,   37,   12,   13,   15,
-       17,   16,   14,    1,   14,   14,   14,    5,   14,    7,
-       14,   14,   14,   37,   14,   14,   14,    6,   14,   14,
-       14,   14,    3,   14,   14,   14,   11,   14,    4,   14,
-       10,   14,    8,    2,    9,    0
+        0,    0,   40,   39,   38,    1,   20,   23,   35,   30,
+       31,   21,   24,   33,   25,   13,   22,   14,   34,   26,
+       32,   27,   28,   29,   15,   15,   15,   15,   15,   15,
+       15,   15,   15,   36,   19,   13,   37,   13,   14,   16,
+       18,   17,   15,    2,   15,   15,   15,    6,   15,    8,
+       15,   15,   15,   37,   15,   15,   15,    7,   15,   15,
+       15,   15,    4,   15,   15,   15,   12,   15,    5,   15,
+       11,   15,    9,    3,   10,    0
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -472,6 +494,13 @@ static const flex_int16_t yy_chk[125] =
        76,   76,   76,   76
     } ;
 
+/* Table of booleans, true if rule could match eol. */
+static const flex_int32_t yy_rule_can_match_eol[40] =
+    {   0,
+1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        };
+
 static yy_state_type yy_last_accepting_state;
 static char *yy_last_accepting_cpos;
 
@@ -490,8 +519,14 @@ char *yytext;
 #line 2 "scanner.l"
 #include <stdio.h>
 #include "tokens.h"
-#line 494 "lex.yy.c"
-#line 495 "lex.yy.c"
+
+int line_number = 1; 
+
+int get_line_number(void) {
+    return line_number;
+}
+#line 529 "lex.yy.c"
+#line 530 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -708,9 +743,10 @@ YY_DECL
 		}
 
 	{
-#line 6 "scanner.l"
+#line 14 "scanner.l"
 
-#line 714 "lex.yy.c"
+
+#line 750 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -756,6 +792,16 @@ yy_find_action:
 
 		YY_DO_BEFORE_ACTION;
 
+		if ( yy_act != YY_END_OF_BUFFER && yy_rule_can_match_eol[yy_act] )
+			{
+			int yyl;
+			for ( yyl = 0; yyl < yyleng; ++yyl )
+				if ( yytext[yyl] == '\n' )
+					
+    yylineno++;
+;
+			}
+
 do_action:	/* This label is used only to access EOF actions. */
 
 		switch ( yy_act )
@@ -768,202 +814,202 @@ do_action:	/* This label is used only to access EOF actions. */
 			goto yy_find_action;
 
 case 1:
+/* rule 1 can match eol */
 YY_RULE_SETUP
-#line 7 "scanner.l"
-{return TK_PR_AS;}
+#line 16 "scanner.l"
+{ line_number++;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 8 "scanner.l"
-{return TK_PR_DECLARE;}
+#line 18 "scanner.l"
+{return TK_PR_AS;}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 9 "scanner.l"
-{return TK_PR_ELSE;}
+#line 19 "scanner.l"
+{return TK_PR_DECLARE;}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 10 "scanner.l"
-{return TK_PR_FLOAT;}
+#line 20 "scanner.l"
+{return TK_PR_ELSE;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 11 "scanner.l"
-{return TK_PR_IF;}
+#line 21 "scanner.l"
+{return TK_PR_FLOAT;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 12 "scanner.l"
-{return TK_PR_INT;}
+#line 22 "scanner.l"
+{return TK_PR_IF;}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 13 "scanner.l"
-{return TK_PR_IS;}
+#line 23 "scanner.l"
+{return TK_PR_INT;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 14 "scanner.l"
-{return TK_PR_RETURN;}
+#line 24 "scanner.l"
+{return TK_PR_IS;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 15 "scanner.l"
-{return TK_PR_RETURNS;}
+#line 25 "scanner.l"
+{return TK_PR_RETURN;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 16 "scanner.l"
-{return TK_PR_WHILE;}
+#line 26 "scanner.l"
+{return TK_PR_RETURNS;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 17 "scanner.l"
-{return TK_PR_WITH;}
+#line 27 "scanner.l"
+{return TK_PR_WHILE;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 18 "scanner.l"
-{return TK_LI_FLOAT;}
+#line 28 "scanner.l"
+{return TK_PR_WITH;}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 19 "scanner.l"
-{return TK_LI_INT;}
+#line 29 "scanner.l"
+{return TK_LI_FLOAT;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 20 "scanner.l"
-{return TK_ID;}
+#line 30 "scanner.l"
+{return TK_LI_INT;}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 21 "scanner.l"
-{return TK_OC_LE;}
+#line 31 "scanner.l"
+{return TK_ID;}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 22 "scanner.l"
-{return TK_OC_GE;}
+#line 32 "scanner.l"
+{return TK_OC_LE;}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 23 "scanner.l"
-{return TK_OC_EQ;}
+#line 33 "scanner.l"
+{return TK_OC_GE;}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 24 "scanner.l"
-{return TK_OC_NE;}
+#line 34 "scanner.l"
+{return TK_OC_EQ;}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 25 "scanner.l"
-{return '!';}
+#line 35 "scanner.l"
+{return TK_OC_NE;}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 26 "scanner.l"
-{return '*';} 
+#line 36 "scanner.l"
+{return '!';}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 27 "scanner.l"
-{return '/';} 
+#line 37 "scanner.l"
+{return '*';} 
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 28 "scanner.l"
-{return '%';} 
+#line 38 "scanner.l"
+{return '/';} 
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 29 "scanner.l"
-{return '+';} 
+#line 39 "scanner.l"
+{return '%';} 
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 30 "scanner.l"
-{return '-';} 
+#line 40 "scanner.l"
+{return '+';} 
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 31 "scanner.l"
-{return '<';} 
+#line 41 "scanner.l"
+{return '-';} 
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 32 "scanner.l"
-{return '>';} 
+#line 42 "scanner.l"
+{return '<';} 
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 33 "scanner.l"
-{return '[';} 
+#line 43 "scanner.l"
+{return '>';} 
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 34 "scanner.l"
-{return ']';} 
+#line 44 "scanner.l"
+{return '[';} 
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 35 "scanner.l"
-{return '(';} 
+#line 45 "scanner.l"
+{return ']';} 
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 36 "scanner.l"
-{return ')';} 
+#line 46 "scanner.l"
+{return '(';} 
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 37 "scanner.l"
-{return '=';} 
+#line 47 "scanner.l"
+{return ')';} 
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 38 "scanner.l"
-{return ',';} 
+#line 48 "scanner.l"
+{return '=';} 
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 39 "scanner.l"
-{return ';';} 
+#line 49 "scanner.l"
+{return ',';} 
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 40 "scanner.l"
-{return '&';} 
+#line 50 "scanner.l"
+{return ';';} 
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 41 "scanner.l"
-{return '|';}
+#line 51 "scanner.l"
+{return '&';} 
 	YY_BREAK
 case 36:
-/* rule 36 can match eol */
 YY_RULE_SETUP
-#line 42 "scanner.l"
-{return '\n';}
+#line 52 "scanner.l"
+{return '|';}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 43 "scanner.l"
+#line 53 "scanner.l"
 {}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 44 "scanner.l"
+#line 54 "scanner.l"
 {}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 45 "scanner.l"
+#line 55 "scanner.l"
 ECHO;
 	YY_BREAK
-#line 967 "lex.yy.c"
+#line 1013 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1331,6 +1377,10 @@ static int yy_get_next_buffer (void)
 
 	*--yy_cp = (char) c;
 
+    if ( c == '\n' ){
+        --yylineno;
+    }
+
 	(yytext_ptr) = yy_bp;
 	(yy_hold_char) = *yy_cp;
 	(yy_c_buf_p) = yy_cp;
@@ -1407,6 +1457,11 @@ static int yy_get_next_buffer (void)
 	c = *(unsigned char *) (yy_c_buf_p);	/* cast for 8-bit char's */
 	*(yy_c_buf_p) = '\0';	/* preserve yytext */
 	(yy_hold_char) = *++(yy_c_buf_p);
+
+	if ( c == '\n' )
+		
+    yylineno++;
+;
 
 	return c;
 }
@@ -1874,6 +1929,9 @@ static int yy_init_globals (void)
      * This function is called from yylex_destroy(), so don't allocate here.
      */
 
+    /* We do not touch yylineno unless the option is enabled. */
+    yylineno =  1;
+    
     (yy_buffer_stack) = NULL;
     (yy_buffer_stack_top) = 0;
     (yy_buffer_stack_max) = 0;
@@ -1968,6 +2026,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 45 "scanner.l"
+#line 55 "scanner.l"
 
 

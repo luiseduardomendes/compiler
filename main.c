@@ -1,6 +1,15 @@
 /*
   Programa principal de impressão de tokens.
   Este arquivo será posteriormente substituído.
+
+  Nomes: 
+  - Leonardo Kauer Leffa
+  - Luis Eduardo Pereira Mendes
+
+  turma: B
+  
+  Data: 18/03/2025
+
 */
 #include <stdio.h>
 #define _(s) #s // https://gcc.gnu.org/onlinedocs/gcc-12.2.0/cpp/Stringizing.html
@@ -20,25 +29,14 @@ extern int get_line_number (void);
 void print_token_normal (char *token);
 void print_token_especial (int token);
 int print_token (int token);
-void incr_counter();
-int G_LINE_COUNTER;
 
 int main (int argc, char **argv) {
   int token = 0, retorno = 0;
-  G_LINE_COUNTER = 1;
   while (retorno == 0 && (token = yylex())) {
     retorno = print_token(token);
   }
   yylex_destroy();
   return retorno;
-}
-
-void incr_counter(){
-  G_LINE_COUNTER ++;
-}
-
-int get_line_number(){
-  return G_LINE_COUNTER;
 }
 
 void print_nome(char *token) {
@@ -52,7 +50,6 @@ void print_nome2(int token) {
    - retorna RET_DESCONH se o token é desconhecido */
 int print_token(int token) {
   switch (token){
-  case '\n': incr_counter(); break;
   case '-':
   case '!':
   case '*':
