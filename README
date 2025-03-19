@@ -1,0 +1,8 @@
+# Compiler
+
+## Use instructions
+to run, use the following commands
+```bash
+  make
+  ./a.out < test.c
+```
