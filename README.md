@@ -4,5 +4,5 @@
 to run, use the following commands
 ```bash
   make
-  ./a.out < test.c
+  ./etapa1 < test.c
 ```

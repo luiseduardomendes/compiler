@@ -8,9 +8,15 @@ as function[]
     int a = 10;
     int b = 20;
     return a + b;
+int adsads41__54232;
 
-{} // error character
+-+./!%*()_*-+.
 
+
+9== 
+>=
+
+<=
 int c; //comment ignored
 //whole line ignored
 c = a + b;
