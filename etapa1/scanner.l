@@ -9,7 +9,7 @@ int get_line_number(void) {
 }
 %}
 
-%option noyywrap 
+%option noyywrap yylineno
 
 %%
 

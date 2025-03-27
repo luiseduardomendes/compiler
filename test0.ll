@@ -10,7 +10,7 @@ as function[]
     return a + b;
 int adsads41__54232;
 
--+./!%*()_*-+.
+-+/!%*()_*-+
 
 
 9== 
