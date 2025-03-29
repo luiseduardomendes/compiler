@@ -1,14 +1,15 @@
+// Nomes: 
+//   - Leonardo Kauer Leffa
+//   - Luis Eduardo Pereira Mendes
+// 
+//   turma: B
+//   
+
 %{
-#include <stdio.h>
-#include <stdlib.h>
-
-int yyparse();
-extern FILE *yyin;
-
-
-void yyerror(const char *s) {
-    fprintf(stderr, "Erro: %s\n", s);
-}
+    #include <stdio.h>
+    int get_line_number();
+    int yylex(void);
+    void yyerror (char const *mensagem);
 %}
 
 %define parse.error verbose
@@ -34,74 +35,105 @@ void yyerror(const char *s) {
 %token TK_ER
 
 %%
-programa:
-      lista_elementos ';'
-    | ';'
-    ;
+//-----------------------------------------------------------------------------------------------------------------------
+//  Programa na linguagem
+//-----------------------------------------------------------------------------------------------------------------------
+programa: 
+    lista_opcional_elementos
+    | ';';
+                        
+lista_opcional_elementos: 
+    lista_elementos 
+    | /*epsilon*/;
+                        
+lista_elementos: 
+    elementos_programa ',' lista_elementos 
+    | elementos_programa;
 
-lista_elementos:
-      elemento
-    | lista_elementos ',' elemento
-    ;
+elementos_programa: 
+    definicao_funcao 
+    | declaracao_variavel_global;
 
-elemento:
-      definicao_funcao
+//-----------------------------------------------------------------------------------------------------------------------
+// Usados em toda a linguagem
+//-----------------------------------------------------------------------------------------------------------------------
+tipo: 
+    TK_PR_FLOAT 
+    | TK_PR_INT;
+
+bloco_comandos: 
+    '[' sequencia_opcional_comandos ']';
+
+literal: 
+    TK_LI_INT
+    | TK_LI_FLOAT;
+//-----------------------------------------------------------------------------------------------------------------------
+// Definicao de Funcao
+//-----------------------------------------------------------------------------------------------------------------------
+definicao_funcao: 
+    cabecalho bloco_comandos; 
+
+cabecalho: 
+    TK_ID TK_PR_RETURNS tipo TK_PR_IS                              // sem lista opcional de parâmetros 
+    | TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS; // lista opcional de parâmetros com um ou mais elementos
+
+lista_opcional_parametros:
+    TK_PR_WITH lista_parametros;
+
+lista_parametros: 
+    parametro ',' lista_parametros
+    | parametro;
+
+parametro:
+    TK_ID TK_PR_AS tipo;
+
+//-----------------------------------------------------------------------------------------------------------------------
+// Declaracao de variavel global
+//-----------------------------------------------------------------------------------------------------------------------
+declaracao_variavel_global: 
+    TK_PR_DECLARE TK_ID TK_PR_AS tipo; 
+
+//-----------------------------------------------------------------------------------------------------------------------
+// Comandos Simples
+//-----------------------------------------------------------------------------------------------------------------------
+sequencia_opcional_comandos:
+    sequencia_comandos
+    | /*epsilon*/;
+
+sequencia_comandos:
+    sequencia_comandos comando_simples
+    | comando_simples;
+
+comando_simples:
+    bloco_comandos
     | declaracao_variavel
-    ;
-
-definicao_funcao:
-      TK_ID TK_PR_RETURNS tipo TK_PR_IS bloco_comandos
-    | TK_ID TK_PR_RETURNS tipo TK_PR_WITH TK_ID TK_PR_AS tipo TK_PR_IS bloco_comandos
-    | TK_ID TK_PR_RETURNS tipo TK_PR_WITH parametros TK_PR_IS bloco_comandos
-    ;
-
-parametros:
-      TK_ID TK_PR_AS tipo
-    | parametros ',' TK_ID TK_PR_AS tipo
-    ;
-
-bloco_comandos:
-      '*' /* Representa um bloco de comandos */
-    ;
+    | comando_atribuicao
+    | comando_retorno;
+    /*
+    descomenta aqui luis
+    | chamada_funcao
+    | comandos_controle_fluxo;*/
 
 declaracao_variavel:
-      TK_PR_DECLARE TK_ID TK_PR_AS tipo
-    | TK_PR_DECLARE TK_ID TK_PR_AS tipo TK_PR_WITH valor
-    ;
+    declaracao_variavel_global
+    | declaracao_variavel_global TK_PR_WITH literal;
 
 comando_atribuicao:
-      TK_ID TK_PR_IS expressao
-    ;
-
-chamada_funcao:
-      TK_ID '(' ')'
-    | TK_ID '(' expressao ')'
-    | TK_ID '(' lista_exp ')'
-    ;
-
-lista_exp:
-      expressao
-    | lista_exp ',' expressao
-    ;
+    TK_ID TK_PR_IS expressao;
 
 comando_retorno:
-      TK_PR_RETURN expressao TK_PR_AS tipo
-    ;
+    TK_PR_RETURN expressao TK_PR_AS tipo;
 
-tipo:
-      TK_PR_FLOAT
-    | TK_PR_INT
-    ;
+/////////////////////////////////////////////////////
+// chamada_funcao: ;
+// 
+// comandos_controle_fluxo: ;
 
-expressao:
-      TK_LI_INT
-    | TK_LI_FLOAT
-    | TK_ID
-    ;
+expressao: ;
 
-valor:
-      TK_LI_INT
-    | TK_LI_FLOAT
-    ;
-
+/////////////////////////////////////////////////////
 %%
+
+    void yyerror(char const *mensagem) {
+        printf("[Error] - line %d: %s\n", get_line_number(), mensagem);
+    }
