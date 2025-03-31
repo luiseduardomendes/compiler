@@ -1,14 +1,17 @@
-myFunction RETURNS INT IS *,
-anotherFunction RETURNS FLOAT WITH x AS INT IS *,
-sum RETURNS INT WITH a AS INT,
-b AS INT IS *,
-declare x AS INT,
-declare y AS FLOAT WITH 3.14,
-x IS 10,
-y IS 5.5,
-callFunction(),
+function returns int is *,
+anotherfunction returns float with x as int is *,
+sum returns int with a as int,
+b as int is *,
+declare x as int,
+declare y as float with 3.14,
+x is 10,
+y is 5.5,
+callfunction(),
 calculate(42),
 addNumbers(1,
 2,
-3),
-RETURN x AS INT;
+3)
+return x as int;
+
+declare int_identifier      as int;
+declare float_identifier    as float;
