@@ -1,0 +1,67 @@
+{
+  "name": "UFRGScript Theme",
+  "type": "dark",
+  "colors": {
+    "editor.foreground": "#FFFFFF",
+    "editor.background": "#1E1E1E"
+  },
+  "tokenColors": [
+    {
+      "name": "Comments",
+      "scope": "comment.line.ufrgscript",
+      "settings": {
+        "foreground": "#57A64A",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Control Keywords",
+      "scope": "keyword.control.ufrgscript",
+      "settings": {
+        "foreground": "#569CD6"
+      }
+    },
+    {
+      "name": "Type Keywords",
+      "scope": "storage.type.ufrgscript",
+      "settings": {
+        "foreground": "#c94e54"
+      }
+    },
+    {
+      "name": "Numbers",
+      "scope": "constant.numeric",
+      "settings": {
+        "foreground": "#B5CEA8"
+      }
+    },
+    {
+      "name": "Integer Literals",
+      "scope": "constant.numeric.integer.ufrgscript",
+      "settings": {
+        "foreground": "#B5CEA8"
+      }
+    },
+    {
+      "name": "Float Literals",
+      "scope": "constant.numeric.float.ufrgscript",
+      "settings": {
+        "foreground": "#D7BA7D"
+      }
+    },
+    {
+      "name": "Identifiers",
+      "scope": "variable.other.ufrgscript",
+      "settings": {
+        "foreground": "#9CDCFE"
+      }
+    },
+    {
+      "name": "Operators",
+      "scope": "keyword.operator.ufrgscript",
+      "settings": {
+        "foreground": "#D4D4D4"
+      }
+    }
+  ]
+}
