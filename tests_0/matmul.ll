@@ -1,17 +1,17 @@
-declare global_factor as int
+declare global_factor as int,
 
 multiply_accumulate returns int with a as int, b as int is [
-    a is a + a * b
-]
+    a is a + a * b // a += a*b
+],
 
 set_global returns int with a as int is [
     global_factor is a 
     return global_factor as int
-]
+],
 
 get_global returns int is [
     return global_factor as int
-]
+],
 
 main returns int is [
     declare x as int with 2
@@ -35,5 +35,5 @@ main returns int is [
         ]
     ]
 
-    return 0
-]
+    return 0 as int
+];
