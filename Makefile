@@ -42,5 +42,5 @@
 all:
 	bison -d parser.y 
 	flex scanner.l 
-	gcc -c lex.yy.c parser.tab.c -fsanitize=address
-	gcc -fsanitize=address lex.yy.o parser.tab.o -lfl -o etapa2
+	gcc -c lex.yy.c parser.tab.c main.c -fsanitize=address
+	gcc -fsanitize=address lex.yy.o parser.tab.o main.o -lfl -o etapa2
