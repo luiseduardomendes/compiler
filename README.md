@@ -10,6 +10,14 @@ to run, use the following commands
   ./etapa2 < tests/matmul.ll
 ```
 
+## Syntax Highlighter
+To install the syntax highlight extension in vscode, follow the steps:
+- In VS Code, go to the Extensions view (Ctrl+Shift+X)
+
+- Click the "..." menu and select "Install from VSIX..."
+
+- Choose the `syntax_highlight/ufrgscript-syntax-0.0.1.vsix` file 
+
 ## Tester
 To use the tester, run the following commands
 ```bash
