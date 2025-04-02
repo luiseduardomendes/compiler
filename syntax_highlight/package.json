@@ -10,13 +10,6 @@
     "Programming Languages"
   ],
   "contributes": {
-    "themes": [
-      {
-        "label": "UFRGScript Theme",
-        "uiTheme": "vs-dark",
-        "path": "./themes/ufrgscript-color-theme.json"
-      }
-    ],
     "languages": [
       {
         "id": "ufrgscript",
@@ -25,7 +18,7 @@
           "ufrgscript"
         ],
         "extensions": [
-          ".ufrgs"
+          ".ll"
         ],
         "configuration": "./language-configuration.json"
       }
