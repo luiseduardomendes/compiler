@@ -1,46 +1,47 @@
-## Compiler and flags
-#CC = gcc
-#CFLAGS = -Wall -Wextra -g
-#LEX = flex
-#BISON = bison
+# Compiler and flags
+CC = gcc
+CFLAGS = -Wall -Wextra -g -fsanitize=address
+LEX = flex
+BISON = bison
 
-## Source files
-#LEX_FILE = scanner.l
-#BISON_FILE = parser.y
-#SRC = main.c lex.yy.c parser.tab.c
-#OBJ = main.o lex.yy.o parser.tab.o
+# Source files
+LEX_FILE = scanner.l
+BISON_FILE = parser.y
+C_SOURCES = main.c
+GENERATED_SOURCES = lex.yy.c parser.tab.c
+GENERATED_HEADERS = parser.tab.h
+SOURCES = $(C_SOURCES) $(GENERATED_SOURCES)
+OBJ = $(SOURCES:.c=.o)
 
-## Output binary
-#TARGET = etapa2
+# Output binary
+TARGET = etapa2
 
-## Rules
-#all: $(TARGET)
+# Default target
+all: $(TARGET)
 
-#$(TARGET): $(OBJ)
-#	$(CC) $(CFLAGS) -o $@ $^ -lfl
+# Main build rule
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) -lfl
 
-#lex.yy.c: $(LEX_FILE)
-#	$(LEX) -o $@ $<
+# Flex rule
+lex.yy.c: $(LEX_FILE)
+	$(LEX) -o $@ $<
 
-#parser.tab.c parser.tab.h: $(BISON_FILE)
-#	$(BISON) -d -o parser.tab.c $<
+# Bison rule (generates both .c and .h)
+parser.tab.c parser.tab.h: $(BISON_FILE)
+	$(BISON) -d -o parser.tab.c $<
 
-#main.o: main.c
-#	$(CC) $(CFLAGS) -c $< -o $@
+# Special rule for main.o since it depends on generated header
+main.o: main.c $(GENERATED_HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-#lex.yy.o: lex.yy.c
-#	$(CC) $(CFLAGS) -c $< -o $@
+# Pattern rule for other object files
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-#parser.tab.o: parser.tab.c
-#	$(CC) $(CFLAGS) -c $< -o $@
+# Clean generated files
+clean:
+	rm -f $(OBJ) $(GENERATED_SOURCES) $(GENERATED_HEADERS) $(TARGET)
 
-#clean:
-#	rm -f $(OBJ) lex.yy.c parser.tab.c parser.tab.h $(TARGET)
-
-#.PHONY: all clean
-
-all:
-	bison -d parser.y 
-	flex scanner.l 
-	gcc -c lex.yy.c parser.tab.c main.c -fsanitize=address
-	gcc -fsanitize=address lex.yy.o parser.tab.o main.o -lfl -o etapa2
+# Phony targets
+.PHONY: all clean

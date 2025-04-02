@@ -1,69 +1,88 @@
 import os
 import subprocess
 import sys
+import signal
+from typing import Tuple, Optional
 
 # Configuration
 TEST_DIR = "tests"
 TEST_PREFIX = "test"
 TEST_EXTENSION = ".ll"
-EXPECTED_ERROR_PREFIX = "[Error] - line "
-COMPILER_PATH = "./etapa2"  # Path to your compiler executable
+EXPECTED_ERROR_PREFIX = "[Error]"
+COMPILER_PATH = "./etapa2"
+TIMEOUT = 2
+
+def run_parser(test_file: str) -> Tuple[Optional[str], Optional[str]]:
+    """Run the parser and return combined output"""
+    try:
+        with open(test_file, 'r') as f:
+            proc = subprocess.Popen(
+                [COMPILER_PATH],
+                stdin=f,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            try:
+                stdout, stderr = proc.communicate(timeout=TIMEOUT)
+                return stdout + stderr  # Combine both outputs
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                return f"Timeout after {TIMEOUT} seconds"
+    except Exception as e:
+        return f"Execution failed: {str(e)}"
 
 def run_tests():
-    # Get all test files in order
+    if not os.path.exists(COMPILER_PATH):
+        print(f"Error: Parser executable not found at {COMPILER_PATH}")
+        return 1
+
     test_files = sorted(
-        [f for f in os.listdir(TEST_DIR) if f.startswith(TEST_PREFIX) and f.endswith(TEST_EXTENSION)],
-        key=lambda x: int(x[len(TEST_PREFIX):-len(TEST_EXTENSION)])
-    )
+        [f for f in os.listdir(TEST_DIR) 
+         if f.startswith(TEST_PREFIX) and f.endswith(TEST_EXTENSION)],
+        key=lambda x: int(x[len(TEST_PREFIX):-len(TEST_EXTENSION)]))
     
     passed = 0
     failed = 0
     
+    print(f"Found {len(test_files)} test files")
+    print("=" * 50)
+
     for test_file in test_files:
         test_num = test_file[len(TEST_PREFIX):-len(TEST_EXTENSION)]
         test_path = os.path.join(TEST_DIR, test_file)
         
-        # Read expected error from first line of test file (assuming it's in a comment)
         with open(test_path, 'r') as f:
-            first_line = f.readline().strip()
-            if first_line.startswith("// Expected: "):
-                expected_error = first_line[len("// Expected: "):].replace('\n', '')
-            else:
-                print(f"Test {test_num} missing expected error in first line comment")
-                failed += 1
-                continue
+            first_line = f.readline()
+            expected_error = first_line[len("// Expected: "):].strip() if first_line.startswith("// Expected: ") else ""
         
-        # Run compiler and capture output
-        try:
-            result = subprocess.run(
-                [COMPILER_PATH, test_path],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-        except subprocess.TimeoutExpired:
-            print(f"Test {test_num} timed out")
-            failed += 1
-            continue
-        
-        # Check if we got the expected error
-        stderr = result.stderr.strip()
-        if stderr.startswith(EXPECTED_ERROR_PREFIX):
-            if expected_error in stderr:
-                print(f"Test {test_num} PASSED")
+        print(f"\n\033[33mRunning test {test_num}\033[m ({test_file})")
+
+        output = run_parser(test_path)
+
+        if expected_error:
+            # Test expects an error
+            if expected_error in output:
+                print("\033[32m✓ PASSED (found expected error)\033[m")
                 passed += 1
             else:
-                print(f"Test {test_num} FAILED")
-                print(f"  Expected: {expected_error}")
-                print(f"  Got: {stderr}")
+                print("\033[31m✗ FAILED (expected error not found)\033[m")
+                print(f"Parser output:\n\t{output}")
+                print(f"Expected: \n\t{expected_error}")
                 failed += 1
         else:
-            print(f"Test {test_num} FAILED (no error detected)")
-            print(f"  Expected error: {expected_error}")
-            print(f"  Compiler output: {stderr if stderr else 'No output'}")
-            failed += 1
+            # Test expects success
+            if EXPECTED_ERROR_PREFIX not in output:
+                print("\033[32m✓ PASSED (no errors found)\033[m")
+                passed += 1
+            else:
+                print("\033[31m✗ FAILED (found unexpected error)\033[m")
+                failed += 1
     
-    print(f"\nSummary: {passed} passed, {failed} failed")
+    print("\n" + "=" * 50)
+    print(f"TEST SUMMARY: \033[32m{passed} passed\033[m, \033[31m{failed} failed\033[m")
     return 0 if failed == 0 else 1
 
 if __name__ == "__main__":
