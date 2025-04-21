@@ -7,12 +7,18 @@
 
 %{
     #include <stdio.h>
+    #include "asd.h"
     int get_line_number();
     int yylex(void);
     void yyerror (char const *mensagem);
+
+    extern asd_tree_t *arvore;
 %}
 
 %define parse.error verbose
+
+%union {asd_tree_t no;};
+// oiiiiii Leo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 %token TK_PR_AS
 %token TK_PR_DECLARE
@@ -29,10 +35,35 @@
 %token TK_OC_GE
 %token TK_OC_EQ
 %token TK_OC_NE
-%token TK_ID
-%token TK_LI_INT
-%token TK_LI_FLOAT
+%token <no>TK_ID
+%token <no>TK_LI_INT
+%token <no>TK_LI_FLOAT
 %token TK_ER
+
+%type<no> programa
+%type<no> nivel0
+%type<no> nivel1
+%type<no> nivel2
+%type<no> nivel3
+%type<no> nivel4
+%type<no> nivel5
+%type<no> nivel6
+%type<no> nivel7
+%type<no> expressao
+%type<no> termo
+%type<no> argumento
+%type<no> comando_atribuicao
+%type<no> comando_retorno
+%type<no> comando_simples
+%type<no> comandos_controle_fluxo
+%type<no> chamada_funcao
+%type<no> sequencia_comandos
+%type<no> lista_argumentos
+%type<no> lista_elementos
+%type<no> lista_opcional_parametros
+%type<no> lista_parametros
+%type<no> elementos_programa
+%type<no> parametro
 
 %start programa
 
@@ -100,8 +131,8 @@ sequencia_opcional_comandos:
     | /*epsilon*/;
 
 sequencia_comandos:
-    sequencia_comandos comando_simples
-    | comando_simples;
+    comando_simples sequencia_comandos  { $$ = $1; asd_add_child($1, $2); } | 
+    comando_simples                     { $$ = $1; };
 
 comando_simples:
     bloco_comandos
@@ -112,83 +143,80 @@ comando_simples:
     | comandos_controle_fluxo;
 
 declaracao_variavel:
-     declaracao_variavel_global
-    | declaracao_variavel_global TK_PR_WITH literal;
+    declaracao_variavel_global | 
+    declaracao_variavel_global TK_PR_WITH literal;
 
 comando_atribuicao:
-    TK_ID TK_PR_IS expressao;
+    TK_ID TK_PR_IS expressao {$$ = asd_new("TK_PR_IS"); asd_add_child($$, $1) asd_add_child($$, $3) } ; 
 
 chamada_funcao: 
-    TK_ID '(' lista_argumentos ')'
-    | TK_ID '(' ')'
-    ;
+    TK_ID '(' lista_argumentos ')'  {} | 
+    TK_ID '(' ')'                   {} ;
 
 comando_retorno:
-    TK_PR_RETURN expressao TK_PR_AS tipo;
+    TK_PR_RETURN expressao TK_PR_AS tipo {} ;
 
 lista_argumentos:
-    argumento ',' lista_argumentos | argumento
+    argumento ',' lista_argumentos  {} |
+    argumento                       { $$ = $1 } ;
 
 argumento:
-    expressao
-
+    expressao { $$ = $1 };
 
 comandos_controle_fluxo: 
-    TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos 
-    | TK_PR_IF '(' expressao ')' bloco_comandos
-    | TK_PR_WHILE '(' expressao ')' bloco_comandos
-    ;
+    TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos {} | 
+    TK_PR_IF '(' expressao ')' bloco_comandos                           {} |  
+    TK_PR_WHILE '(' expressao ')' bloco_comandos                        {} ;
+
+termo: // TODO: im not sure it works
+    TK_ID       { $$ = asd_new($1->valor_lexico); } |
+    TK_LI_INT   { $$ = asd_new($1->valor_lexico); } |
+    TK_LI_FLOAT { $$ = asd_new($1->valor_lexico); } ;
 
 expressao:  
-    nivel7;
+    nivel7 { $$ = $1 };
+
+nivel7:
+    nivel6            { $$ = $1; } |
+    nivel7 '|' nivel6 { $$ = asd_new("|"); asd_add_child($$, $1) asd_add_child($$, $3)} ;
+
+nivel6:
+    nivel5            { $$ = $1; } |
+    nivel6 '&' nivel5 { $$ = asd_new("&"); asd_add_child($$, $1) asd_add_child($$, $3)} ;
+
+nivel5:
+    nivel4                 { $$ = $1; } |
+    nivel5 TK_OC_EQ nivel4 { $$ = asd_new("=="); asd_add_child($$, $1) asd_add_child($$, $3)} |
+    nivel5 TK_OC_NE nivel4 { $$ = asd_new("!="); asd_add_child($$, $1) asd_add_child($$, $3)} ;
+
+nivel4:
+    nivel3                 { $$ = $1; } |
+    nivel4 '<' nivel3      { $$ = asd_new("<") ; asd_add_child($$, $1) asd_add_child($$, $3)} | 
+    nivel4 '>' nivel3      { $$ = asd_new(">") ; asd_add_child($$, $1) asd_add_child($$, $3)} | 
+    nivel4 TK_OC_LE nivel3 { $$ = asd_new("<="); asd_add_child($$, $1) asd_add_child($$, $3)} | 
+    nivel4 TK_OC_GE nivel3 { $$ = asd_new(">="); asd_add_child($$, $1) asd_add_child($$, $3)} ;
+
+nivel3:
+    nivel2            { $$ = $1; } |
+    nivel3 '+' nivel2 { $$ = asd_new("+"); asd_add_child($$, $1) asd_add_child($$, $3)} |
+    nivel3 '-' nivel2 { $$ = asd_new("-"); asd_add_child($$, $1) asd_add_child($$, $3)} ;
+
+nivel2:
+    nivel1            { $$ = $1; } |
+    nivel2 '*' nivel1 { $$ = asd_new("+"); asd_add_child($$, $1); asd_add_child($$, $3); } |
+    nivel2 '/' nivel1 { $$ = asd_new("-"); asd_add_child($$, $1); asd_add_child($$, $3); } | 
+    nivel2 '%' nivel1 { $$ = asd_new("!"); asd_add_child($$, $1); asd_add_child($$, $3); } ;
+    
+nivel1:
+    nivel0     { $$ = $1; } |
+    '+' nivel1 { $$ = asd_new("+"); asd_add_child($$, $2); } |
+    '-' nivel1 { $$ = asd_new("-"); asd_add_child($$, $2); } |
+    '!' nivel1 { $$ = asd_new("!"); asd_add_child($$, $2); } ;
 
 nivel0:
     termo |
     chamada_funcao | 
     '(' expressao ')';
-    
-termo:
-    TK_ID |
-    TK_LI_INT |
-    TK_LI_FLOAT;
-
-nivel1:
-    nivel0 |
-    '+' nivel1 |
-    '-' nivel1 |
-    '!' nivel1 ;
-
-nivel2:
-    nivel1 |
-    nivel2 '*' nivel1 |
-    nivel2 '/' nivel1 | 
-    nivel2 '%' nivel1 ;
-
-nivel3:
-    nivel2 |
-    nivel3 '+' nivel2 |
-    nivel3 '-' nivel2;
-
-nivel4:
-    nivel3 |
-    nivel4 '<' nivel3 | 
-    nivel4 '>' nivel3 | 
-    nivel4 TK_OC_LE nivel3 | 
-    nivel4 TK_OC_GE nivel3;
-
-nivel5:
-    nivel4 |
-    nivel5 TK_OC_EQ nivel4|
-    nivel5 TK_OC_NE nivel4;
-
-nivel6:
-    nivel5 |
-    nivel6 '&' nivel5;
-
-nivel7:
-    nivel6 |
-    nivel7 '|' nivel6;
-
 
 %%
 

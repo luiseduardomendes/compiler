@@ -28,7 +28,15 @@ int get_line_number(void) {
 "with"                                  {return TK_PR_WITH;}
 [0-9]*\.[0-9]+                          {return TK_LI_FLOAT;}
 [0-9]+                                  {return TK_LI_INT;}
-[a-z_][a-z0-9_]*                        {return TK_ID;}
+[a-z_][a-z0-9_]*                        {
+    valor_t *aux = NULL;
+    aux = malloc(sizeof(valor_t));
+    if(aux == NULL){
+        exit(0);
+    }
+    aux->lexema = strdup(yytext);
+    yylval.valor_lexico = aux;
+    return TK_ID;}
 "<="                                    {return TK_OC_LE;}
 ">="                                    {return TK_OC_GE;}
 "=="                                    {return TK_OC_EQ;}
