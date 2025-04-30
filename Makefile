@@ -14,17 +14,17 @@ BISON = bison
 # Source files
 LEX_FILE = scanner.l
 BISON_FILE = parser.y
-C_SOURCES = main.c
+C_SOURCES = main.c asd.c
 GENERATED_SOURCES = lex.yy.c parser.tab.c
 GENERATED_HEADERS = parser.tab.h
 SOURCES = $(C_SOURCES) $(GENERATED_SOURCES)
 OBJ = $(SOURCES:.c=.o)
 
 # Output binary
-TARGET = etapa2
+TARGET = etapa3
 
 # Default target
-all: $(TARGET)
+all: $(TARGET) 
 
 # Main build rule
 $(TARGET): $(OBJ)
@@ -37,10 +37,9 @@ lex.yy.c: $(LEX_FILE)
 # Bison rule (generates both .c and .h)
 parser.tab.c parser.tab.h: $(BISON_FILE)
 	$(BISON) -d -o parser.tab.c $<
-
 # Special rule for main.o since it depends on generated header
 main.o: main.c $(GENERATED_HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@ 
 
 # Pattern rule for other object files
 %.o: %.c

@@ -1,5 +1,9 @@
 %{
 #include <stdio.h>
+#include "asd.h"
+
+typedef struct {char *lexema;} valor_t;
+
 #include "parser.tab.h"
 
 int line_number = 1; 

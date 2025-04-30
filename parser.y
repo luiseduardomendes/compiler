@@ -7,6 +7,8 @@
 
 %{
     #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
     #include "asd.h"
     int get_line_number();
     int yylex(void);
@@ -14,13 +16,33 @@
 
     extern asd_tree_t *arvore;
 
-    typedef {char *lexema;} valor_t;
+    typedef struct {char *lexema;} valor_t;
+%}
+%{
+// Add these helper functions
+static void free_valor(valor_t *val) {
+    if (val) {
+        free(val->lexema);
+        free(val);
+    }
+}
+
+static char *safe_strconcat(const char *s1, const char *s2) {
+    char *result;
+    if (asprintf(&result, "%s%s", s1, s2) == -1) {
+        yyerror("String concatenation failed");
+        return NULL;
+    }
+    return result;
+}
 %}
 
 %define parse.error verbose
 
-%union {asd_tree_t no; valor_t *valor_lexico;};
-// oiiiiii Leo!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%union {
+    asd_tree_t *no; 
+    valor_t *valor_lexico;
+};
 
 %token TK_PR_AS
 %token TK_PR_DECLARE
@@ -72,6 +94,9 @@
 %type<no> declaracao_variavel_global
 %type<no> definicao_funcao
 
+%type<valor_lexico> cabecalho
+%type<valor_lexico> literal
+
 %start programa
 
 %%
@@ -79,17 +104,17 @@
 //  Programa na linguagem
 //-----------------------------------------------------------------------------------------------------------------------
 programa: 
-    lista_elementos ';' 
-    | /*epsilon*/
+    lista_elementos ';' { $$ = $1; } | 
+    /*epsilon*/
     ;
                         
 lista_elementos: 
-    lista_elementos ',' elementos_programa
-    | elementos_programa;
+    lista_elementos ',' elementos_programa  { $$ = $3; asd_add_child($$, $1); } | 
+    elementos_programa                      { $$ = $1; } ;
 
 elementos_programa: 
-    definicao_funcao | 
-    declaracao_variavel_global ;
+    definicao_funcao            { $$ = $1; } | 
+    declaracao_variavel_global  {  } ;
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Usados em toda a linguagem
@@ -99,20 +124,24 @@ tipo:
     TK_PR_INT;
 
 bloco_comandos: 
-    '[' sequencia_opcional_comandos ']';
+    '[' sequencia_opcional_comandos ']' { $$ = $2; };
 
 literal: 
-    TK_LI_INT | 
-    TK_LI_FLOAT;
+    TK_LI_INT   { $$ = $1; } | 
+    TK_LI_FLOAT { $$ = $1; } ;
 //-----------------------------------------------------------------------------------------------------------------------
 // Definicao de Funcao
 //-----------------------------------------------------------------------------------------------------------------------
 definicao_funcao: 
-    cabecalho bloco_comandos ; 
+    cabecalho bloco_comandos {
+        $$ = asd_new($1->lexema);  
+        asd_add_child($$, $2);
+        free_valor($1);  
+    };
 
 cabecalho: 
-    TK_ID TK_PR_RETURNS tipo TK_PR_IS |                             // sem lista opcional de parâmetros 
-    TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS;    // lista opcional de parâmetros com um ou mais elementos
+    TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { $$ = $1; } | 
+    TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { $$ = $1; } ;
 
 lista_opcional_parametros:
     TK_PR_WITH lista_parametros;
@@ -134,56 +163,63 @@ declaracao_variavel_global:
 // Comandos Simples
 //-----------------------------------------------------------------------------------------------------------------------
 sequencia_opcional_comandos:
-    sequencia_comandos { $$ = $1; } |
-    | /*epsilon*/ {  } ;
+    sequencia_comandos  { $$ = $1; } |
+    /*epsilon*/         {  } ;  // Don't leave uninitialized
 
 sequencia_comandos:
-    comando_simples sequencia_comandos  { $$ = $1; asd_add_child($$, $2); } | 
+    sequencia_comandos comando_simples  { $$ = $1; asd_add_child($$, $2); } | 
     comando_simples                     { $$ = $1; };
 
 comando_simples:
-    bloco_comandos          { $$ = $1 } | 
-    declaracao_variavel     { $$ = $1 } | 
-    comando_atribuicao      { $$ = $1 } | 
-    comando_retorno         { $$ = $1 } | 
-    chamada_funcao          { $$ = $1 } | 
-    comandos_controle_fluxo { $$ = $1 } ;
+    bloco_comandos          { $$ = $1; } | 
+    declaracao_variavel     { $$ = $1; } | 
+    comando_atribuicao      { $$ = $1; } | 
+    comando_retorno         { $$ = $1; } | 
+    chamada_funcao          { $$ = $1; } | 
+    comandos_controle_fluxo { $$ = $1; } ;
 
 declaracao_variavel:
-    declaracao_variavel_global | 
+    declaracao_variavel_global { $$ = asd_new("empty"); } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("TK_PR_WITH");
         asd_add_child($$, $1);
-        asd_add_child($$, $3);
+        asd_add_child($$, asd_new($3->lexema));
     } ;
 
 comando_atribuicao:
     TK_ID TK_PR_IS expressao {
         $$ = asd_new("TK_PR_IS"); 
-        asd_add_child($$, $1); 
+        asd_add_child($$, asd_new($1->lexema)); 
         asd_add_child($$, $3);
     } ; 
 
 chamada_funcao: 
     TK_ID '(' lista_argumentos ')'  { 
-        $$ = asd_new("call %s", $1->lexema);
-        asd_add_child($$, $3);  // arguments
+        char *func_name = safe_strconcat("call ", $1->lexema);
+        $$ = asd_new(func_name);
+        free(func_name);
+        asd_add_child($$, $3);
+        free_valor($1);  // Clean up the token value
     } | 
-    TK_ID '(' ')'                   {} ;
+    TK_ID '(' ')' {
+        char *func_name = safe_strconcat("call ", $1->lexema);
+        $$ = asd_new(func_name);
+        free(func_name);
+        free_valor($1);  // Clean up the token value
+    } ;
 
 comando_retorno:
     TK_PR_RETURN expressao TK_PR_AS tipo { 
         $$ = asd_new("TK_PR_RETURN");
         asd_add_child($$, $2);
-        asd_add_child($$, $4);
-    } | {};
+    };
 
 lista_argumentos:
     argumento ',' lista_argumentos  { $$ = $1; asd_add_child($$, $3); } |
     argumento                       { $$ = $1; } ;
 
 argumento:
-    expressao { $$ = $1 };
+    expressao { $$ = $1; };
 
 comandos_controle_fluxo: 
     TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos { 
@@ -204,13 +240,22 @@ comandos_controle_fluxo:
         asd_add_child($$, $5); 
     } ;
 
-termo: // TODO: im not sure it works
-    TK_ID       { $$ = asd_new($1->lexema); } |
-    TK_LI_INT   { $$ = asd_new($1->lexema); } |
-    TK_LI_FLOAT { $$ = asd_new($1->lexema); } ;
+termo:
+    TK_ID {
+        $$ = asd_new($1->lexema);
+        free_valor($1);  // Clean up
+    } |
+    TK_LI_INT {
+        $$ = asd_new($1->lexema);
+        free_valor($1);  // Clean up
+    } |
+    TK_LI_FLOAT {
+        $$ = asd_new($1->lexema);
+        free_valor($1);  // Clean up
+    } ;
 
 expressao:  
-    nivel7 { $$ = $1 };
+    nivel7 { $$ = $1; };
 
 nivel7:
     nivel6            { $$ = $1; } |
@@ -252,7 +297,7 @@ nivel1:
 nivel0:
     termo               { $$ = $1; } |
     chamada_funcao      { $$ = $1; } | 
-    '(' expressao ')'   { $$ = $2; } |;
+    '(' expressao ')'   { $$ = $2; } ;
 
 %%
 
