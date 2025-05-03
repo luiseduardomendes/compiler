@@ -1,4 +1,4 @@
-// Expected: 
+// expected: 
 declare global_factor as int,
 multiply_accumulate returns int with a as int, b as int is [ a is a + a * b ],
 set_global returns int with a as int is [ global_factor is a return global_factor as int ],

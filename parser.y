@@ -117,7 +117,7 @@ programa:
     ;
                         
 lista_elementos: 
-    lista_elementos ',' elementos_programa  { $$ = $3; if($3 != NULL){asd_add_child($$, $1);} } | 
+    lista_elementos ',' elementos_programa  { $$ = $3; if($1 != NULL){asd_add_child($$, $1);} } | 
     elementos_programa                      { $$ = $1; } ;
 
 elementos_programa: 
@@ -143,7 +143,9 @@ literal:
 definicao_funcao: 
     cabecalho bloco_comandos {
         $$ = asd_new($1->lexema);  
-        asd_add_child($$, $2);
+        if($2 != NULL){
+            asd_add_child($$, $2);
+        }
         free_valor($1);  
     };
 
@@ -180,8 +182,8 @@ sequencia_opcional_comandos:
     /*epsilon*/         { $$ = NULL; } ; 
 
 sequencia_comandos:
-    sequencia_comandos comando_simples  { $$ = $1; asd_add_child($$, $2); } | 
-    comando_simples                     { if($1 != NULL){$$ = $1;} else{$$ = NULL; }};
+    sequencia_comandos comando_simples  { $$ = $1; if($2 != NULL){asd_add_child($$, $2);}} | 
+    comando_simples                     { $$ = $1; };
 
 comando_simples:
     bloco_comandos          { $$ = $1; } | 
@@ -194,15 +196,17 @@ comando_simples:
 declaracao_variavel:
     declaracao_variavel_global {$$ = NULL; } | 
     declaracao_variavel_global TK_PR_WITH literal { 
-        $$ = asd_new("TK_PR_WITH");
-        asd_add_child($$, $1);
+        $$ = asd_new("with");
+        if($1 != NULL){
+            asd_add_child($$, $1);
+        }
         asd_add_child($$, asd_new($3->lexema));
         free_valor($3);
     } ;
 
 comando_atribuicao:
     TK_ID TK_PR_IS expressao {
-        $$ = asd_new("TK_PR_IS"); 
+        $$ = asd_new("is"); 
         asd_add_child($$, asd_new($1->lexema)); 
         asd_add_child($$, $3);
         free_valor($1);
@@ -225,7 +229,7 @@ chamada_funcao:
 
 comando_retorno:
     TK_PR_RETURN expressao TK_PR_AS tipo { 
-        $$ = asd_new("TK_PR_RETURN");
+        $$ = asd_new("return");
         asd_add_child($$, $2);
     };
 
@@ -238,20 +242,26 @@ argumento:
 
 comandos_controle_fluxo: 
     TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos { 
-        $$ = asd_new("TK_PR_IF");    
+        $$ = asd_new("if");    
         asd_add_child($$, $3); 
-        asd_add_child($$, $5); 
+        if($5 != NULL){
+            asd_add_child($$, $5); 
+        }
         asd_add_child($$, $7); 
     } |  
     TK_PR_IF '(' expressao ')' bloco_comandos { 
-        $$ = asd_new("TK_PR_IF");     
+        $$ = asd_new("if");     
         asd_add_child($$, $3);
-        asd_add_child($$, $5); 
+        if($5 != NULL){
+            asd_add_child($$, $5); 
+        }
     } |
     TK_PR_WHILE '(' expressao ')' bloco_comandos { 
-        $$ = asd_new("TK_PR_WHILE");  
+        $$ = asd_new("while");  
         asd_add_child($$, $3);
-        asd_add_child($$, $5); 
+        if($5 != NULL){
+            asd_add_child($$, $5); 
+        }
     } ;
 
 termo:
