@@ -10,21 +10,29 @@
     #include <stdlib.h>
     #include <string.h>
     #include "asd.h"
+
     int get_line_number();
     int yylex(void);
     void yyerror (char const *mensagem);
 
     extern asd_tree_t *arvore;
 
-    typedef struct {char *lexema;} valor_t;
+    typedef struct {
+      char *lexema;
+      int line_number;
+      int token_type;
+   } valor_t;
+
 %}
+
 %{
+
 // Add these helper functions
 static void free_valor(valor_t *val) {
     if (val) {
         free(val->lexema);
-        free(val);
     }
+    free(val);
 }
 
 static char *safe_strconcat(const char *s1, const char *s2) {
@@ -104,17 +112,17 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 //  Programa na linguagem
 //-----------------------------------------------------------------------------------------------------------------------
 programa: 
-    lista_elementos ';' { $$ = $1; } | 
-    /*epsilon*/
+    lista_elementos ';' { $$ = $1; arvore = $$; } | 
+    /*epsilon*/         { $$ = NULL; arvore = $$; }
     ;
                         
 lista_elementos: 
-    lista_elementos ',' elementos_programa  { $$ = $3; asd_add_child($$, $1); } | 
+    lista_elementos ',' elementos_programa  { $$ = $3; if($3 != NULL){asd_add_child($$, $1);} } | 
     elementos_programa                      { $$ = $1; } ;
 
 elementos_programa: 
     definicao_funcao            { $$ = $1; } | 
-    declaracao_variavel_global  {  } ;
+    declaracao_variavel_global  { $$ = NULL; } ;
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Usados em toda a linguagem
@@ -151,24 +159,29 @@ lista_parametros:
     parametro;
 
 parametro:
-    TK_ID TK_PR_AS tipo;
+    TK_ID TK_PR_AS tipo{
+        free_valor($1);
+    };
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Declaracao de variavel global
 //-----------------------------------------------------------------------------------------------------------------------
 declaracao_variavel_global: 
-    TK_PR_DECLARE TK_ID TK_PR_AS tipo; 
+    TK_PR_DECLARE TK_ID TK_PR_AS tipo {
+        free_valor($2); 
+        $$ = NULL;
+    }; 
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Comandos Simples
 //-----------------------------------------------------------------------------------------------------------------------
 sequencia_opcional_comandos:
-    sequencia_comandos  { $$ = $1; } |
-    /*epsilon*/         {  } ;  // Don't leave uninitialized
+    sequencia_comandos  { $$ = $1;   } |
+    /*epsilon*/         { $$ = NULL; } ; 
 
 sequencia_comandos:
     sequencia_comandos comando_simples  { $$ = $1; asd_add_child($$, $2); } | 
-    comando_simples                     { $$ = $1; };
+    comando_simples                     { if($1 != NULL){$$ = $1;} else{$$ = NULL; }};
 
 comando_simples:
     bloco_comandos          { $$ = $1; } | 
@@ -179,11 +192,12 @@ comando_simples:
     comandos_controle_fluxo { $$ = $1; } ;
 
 declaracao_variavel:
-    declaracao_variavel_global { $$ = asd_new("empty"); } | 
+    declaracao_variavel_global {$$ = NULL; } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("TK_PR_WITH");
         asd_add_child($$, $1);
         asd_add_child($$, asd_new($3->lexema));
+        free_valor($3);
     } ;
 
 comando_atribuicao:
@@ -191,21 +205,22 @@ comando_atribuicao:
         $$ = asd_new("TK_PR_IS"); 
         asd_add_child($$, asd_new($1->lexema)); 
         asd_add_child($$, $3);
+        free_valor($1);
     } ; 
 
 chamada_funcao: 
     TK_ID '(' lista_argumentos ')'  { 
         char *func_name = safe_strconcat("call ", $1->lexema);
         $$ = asd_new(func_name);
-        free(func_name);
         asd_add_child($$, $3);
-        free_valor($1);  // Clean up the token value
+        free(func_name);
+        free_valor($1);
     } | 
     TK_ID '(' ')' {
         char *func_name = safe_strconcat("call ", $1->lexema);
         $$ = asd_new(func_name);
         free(func_name);
-        free_valor($1);  // Clean up the token value
+        free_valor($1);  
     } ;
 
 comando_retorno:
@@ -232,7 +247,6 @@ comandos_controle_fluxo:
         $$ = asd_new("TK_PR_IF");     
         asd_add_child($$, $3);
         asd_add_child($$, $5); 
-        // TODO: should add else if?
     } |
     TK_PR_WHILE '(' expressao ')' bloco_comandos { 
         $$ = asd_new("TK_PR_WHILE");  
@@ -243,15 +257,15 @@ comandos_controle_fluxo:
 termo:
     TK_ID {
         $$ = asd_new($1->lexema);
-        free_valor($1);  // Clean up
+        free_valor($1);
     } |
     TK_LI_INT {
         $$ = asd_new($1->lexema);
-        free_valor($1);  // Clean up
+        free_valor($1);
     } |
     TK_LI_FLOAT {
         $$ = asd_new($1->lexema);
-        free_valor($1);  // Clean up
+        free_valor($1);
     } ;
 
 expressao:  

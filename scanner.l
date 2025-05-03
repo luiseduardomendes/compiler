@@ -2,7 +2,11 @@
 #include <stdio.h>
 #include "asd.h"
 
-typedef struct {char *lexema;} valor_t;
+typedef struct {
+      char *lexema;
+      int line_number;
+      int token_type;
+} valor_t;
 
 #include "parser.tab.h"
 
@@ -11,6 +15,30 @@ int line_number = 1;
 int get_line_number(void) {
     return line_number;
 }
+
+void set_valor_lexico(int token, char* value){
+    valor_t *aux = NULL;
+    aux = malloc(sizeof(valor_t));
+ 
+    // Checks malloc error
+    if(aux == NULL){
+       fprintf(stderr, "Erro de alocação de memória para valor_t\n");
+       exit(1);
+    }
+ 
+    aux->line_number = get_line_number();
+    aux->token_type = token;
+    aux->lexema = strdup(value);
+
+    if(aux->lexema == NULL){
+      fprintf(stderr, "Erro de alocação de memória para lexema\n");
+      free(aux);
+      exit(1);
+    }
+ 
+    yylval.valor_lexico = aux;
+}
+
 %}
 
 %option noyywrap 
@@ -30,36 +58,9 @@ int get_line_number(void) {
 "returns"                               {return TK_PR_RETURNS;}
 "while"                                 {return TK_PR_WHILE;}
 "with"                                  {return TK_PR_WITH;}
-[0-9]*\.[0-9]+                          {
-                                            valor_t *aux = NULL;
-                                            aux = malloc(sizeof(valor_t));
-                                            if(aux == NULL){
-                                                exit(0);
-                                            }
-                                            aux->lexema = strdup(yytext);
-                                            yylval.valor_lexico = aux;
-                                            return TK_LI_FLOAT;
-                                        }
-[0-9]+                                  {
-                                            valor_t *aux = NULL;
-                                            aux = malloc(sizeof(valor_t));
-                                            if(aux == NULL){
-                                                exit(0);
-                                            }
-                                            aux->lexema = strdup(yytext);
-                                            yylval.valor_lexico = aux;
-                                            return TK_LI_INT;
-                                        }
-[a-z_][a-z0-9_]*                        {
-                                            valor_t *aux = NULL;
-                                            aux = malloc(sizeof(valor_t));
-                                            if(aux == NULL){
-                                                exit(0);
-                                            }
-                                            aux->lexema = strdup(yytext);
-                                            yylval.valor_lexico = aux;
-                                            return TK_ID;
-                                        }
+[0-9]*\.[0-9]+                          {set_valor_lexico(TK_LI_FLOAT, yytext); return TK_LI_FLOAT;}
+[0-9]+                                  {set_valor_lexico(TK_LI_INT,   yytext); return TK_LI_INT;}
+[a-z_][a-z0-9_]*                        {set_valor_lexico(TK_ID,       yytext); return TK_ID;}
 "<="                                    {return TK_OC_LE;}
 ">="                                    {return TK_OC_GE;}
 "=="                                    {return TK_OC_EQ;}
