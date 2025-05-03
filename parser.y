@@ -31,8 +31,8 @@
 static void free_valor(valor_t *val) {
     if (val) {
         free(val->lexema);
+        free(val);
     }
-    free(val);
 }
 
 static char *safe_strconcat(const char *s1, const char *s2) {
@@ -67,6 +67,7 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %token TK_OC_GE
 %token TK_OC_EQ
 %token TK_OC_NE
+
 %token <valor_lexico>TK_ID
 %token <valor_lexico>TK_LI_INT
 %token <valor_lexico>TK_LI_FLOAT
@@ -99,9 +100,9 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %type<no> sequencia_opcional_comandos
 %type<no> bloco_comandos
 %type<no> declaracao_variavel
-%type<no> declaracao_variavel_global
 %type<no> definicao_funcao
 
+%type<valor_lexico> declaracao_variavel_global
 %type<valor_lexico> cabecalho
 %type<valor_lexico> literal
 
@@ -115,14 +116,28 @@ programa:
     lista_elementos ';' { $$ = $1; arvore = $$; } | 
     /*epsilon*/         { $$ = NULL; arvore = $$; }
     ;
-                        
+    
 lista_elementos: 
-    lista_elementos ',' elementos_programa  { $$ = $3; if($1 != NULL){asd_add_child($$, $1);} } | 
-    elementos_programa                      { $$ = $1; } ;
+    elementos_programa ',' lista_elementos {
+        if ($1 != NULL && $3 != NULL) {
+            asd_add_child($1, $3);
+            $$ = $1;
+        } else if ($1 != NULL) {
+            $$ = $1;
+        } else {
+            $$ = $3;
+        }
+    } |
+    elementos_programa {
+        $$ = $1;
+    };
+
+
 
 elementos_programa: 
-    definicao_funcao            { $$ = $1; } | 
-    declaracao_variavel_global  { $$ = NULL; } ;
+    definicao_funcao           { $$ = $1; } | 
+    declaracao_variavel_global { free_valor($1); $$ = NULL; };
+
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Usados em toda a linguagem
@@ -170,9 +185,9 @@ parametro:
 //-----------------------------------------------------------------------------------------------------------------------
 declaracao_variavel_global: 
     TK_PR_DECLARE TK_ID TK_PR_AS tipo {
-        free_valor($2); 
-        $$ = NULL;
-    }; 
+        $$ = asd_new($2->lexema);
+        free_valor($2);
+    };
 
 //-----------------------------------------------------------------------------------------------------------------------
 // Comandos Simples
@@ -182,8 +197,20 @@ sequencia_opcional_comandos:
     /*epsilon*/         { $$ = NULL; } ; 
 
 sequencia_comandos:
-    sequencia_comandos comando_simples  { $$ = $1; if($2 != NULL){asd_add_child($$, $2);}} | 
-    comando_simples                     { $$ = $1; };
+    comando_simples {
+        $$ = $1;
+    } |
+    comando_simples sequencia_comandos {
+        if ($1 != NULL && $2 != NULL) {
+            asd_add_child($1, $2);
+            $$ = $1;
+        } else if ($1 != NULL) {
+            $$ = $1;
+        } else {
+            $$ = $2;
+        }
+    };
+
 
 comando_simples:
     bloco_comandos          { $$ = $1; } | 
@@ -194,15 +221,14 @@ comando_simples:
     comandos_controle_fluxo { $$ = $1; } ;
 
 declaracao_variavel:
-    declaracao_variavel_global {$$ = NULL; } | 
+    declaracao_variavel_global { free($1); } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with");
-        if($1 != NULL){
-            asd_add_child($$, $1);
-        }
+        asd_add_child($$, asd_new($1->lexema));
+        free_valor($1);  
         asd_add_child($$, asd_new($3->lexema));
-        free_valor($3);
-    } ;
+        free_valor($3);  
+    };
 
 comando_atribuicao:
     TK_ID TK_PR_IS expressao {
