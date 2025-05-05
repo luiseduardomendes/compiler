@@ -93,7 +93,6 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %type<no> sequencia_comandos
 %type<no> lista_argumentos
 %type<no> lista_elementos
-%type<no> lista_opcional_parametros
 %type<no> lista_parametros
 %type<no> elementos_programa
 %type<no> parametro
@@ -102,9 +101,9 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %type<no> declaracao_variavel
 %type<no> definicao_funcao
 
-%type<valor_lexico> declaracao_variavel_global
-%type<valor_lexico> cabecalho
-%type<valor_lexico> literal
+%type<no> declaracao_variavel_global
+%type<no> cabecalho
+%type<no> literal
 
 %start programa
 
@@ -136,7 +135,7 @@ lista_elementos:
 
 elementos_programa: 
     definicao_funcao           { $$ = $1; } | 
-    declaracao_variavel_global { free_valor($1); $$ = NULL; };
+    declaracao_variavel_global { asd_free($1); $$ = NULL; };
 
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -150,26 +149,25 @@ bloco_comandos:
     '[' sequencia_opcional_comandos ']' { $$ = $2; };
 
 literal: 
-    TK_LI_INT   { $$ = $1; } | 
-    TK_LI_FLOAT { $$ = $1; } ;
+    TK_LI_INT   { $$ = asd_new($1->lexema); free_valor($1); } | 
+    TK_LI_FLOAT { $$ = asd_new($1->lexema); free_valor($1); } ;
 //-----------------------------------------------------------------------------------------------------------------------
 // Definicao de Funcao
 //-----------------------------------------------------------------------------------------------------------------------
 definicao_funcao: 
     cabecalho bloco_comandos {
-        $$ = asd_new($1->lexema);  
+        $$ = $1;  
         if($2 != NULL){
             asd_add_child($$, $2);
         }
-        free_valor($1);  
     };
 
 cabecalho: 
-    TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { $$ = $1; } | 
-    TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { $$ = $1; } ;
+    TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { $$ = asd_new($1->lexema); free_valor($1); } | 
+    TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { $$ = asd_new($1->lexema); free_valor($1); } ;
 
 lista_opcional_parametros:
-    TK_PR_WITH lista_parametros;
+    TK_PR_WITH lista_parametros ;
 
 lista_parametros: 
     lista_parametros ',' parametro | 
@@ -221,13 +219,11 @@ comando_simples:
     comandos_controle_fluxo { $$ = $1; } ;
 
 declaracao_variavel:
-    declaracao_variavel_global { free($1); } | 
+    declaracao_variavel_global { asd_free($1); } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with");
-        asd_add_child($$, asd_new($1->lexema));
-        free_valor($1);  
-        asd_add_child($$, asd_new($3->lexema));
-        free_valor($3);  
+        asd_add_child($$, $1);
+        asd_add_child($$, $3);
     };
 
 comando_atribuicao:

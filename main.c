@@ -5,6 +5,8 @@ extern int yylex_destroy(void);
 asd_tree_t *arvore = NULL;
 int main (int argc, char **argv)
 {
+  (void)argc;
+  (void)argv;
   int ret = yyparse();
   asd_print_graphviz(arvore);
   asd_free(arvore);
