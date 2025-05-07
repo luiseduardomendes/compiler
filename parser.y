@@ -200,8 +200,8 @@ sequencia_comandos:
     } |
     comando_simples sequencia_comandos {
         if ($1 != NULL && $2 != NULL) {
-            asd_add_child($1, $2);
             $$ = $1;
+            asd_add_child($$, $2);
         } else if ($1 != NULL) {
             $$ = $1;
         } else {
@@ -219,7 +219,7 @@ comando_simples:
     comandos_controle_fluxo { $$ = $1; } ;
 
 declaracao_variavel:
-    declaracao_variavel_global { asd_free($1); } | 
+    declaracao_variavel_global { asd_free($1); $$ = NULL; } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with");
         asd_add_child($$, $1);

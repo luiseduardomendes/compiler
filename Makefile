@@ -7,7 +7,7 @@
 
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -g -fsanitize=address 
+CFLAGS = -Wall -Wextra -g -fsanitize=address
 LEX = flex
 BISON = bison
 
@@ -36,7 +36,7 @@ lex.yy.c: $(LEX_FILE)
 
 # Bison rule (generates both .c and .h)
 parser.tab.c parser.tab.h: $(BISON_FILE)
-	$(BISON) -d -o parser.tab.c -Wcounterexamples $<
+	$(BISON) -d -o parser.tab.c $<
 # Special rule for main.o since it depends on generated header
 main.o: main.c $(GENERATED_HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@ 
