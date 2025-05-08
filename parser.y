@@ -222,15 +222,23 @@ declaracao_variavel:
     declaracao_variavel_global { asd_free($1); $$ = NULL; } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with");
-        asd_add_child($$, $1);
-        asd_add_child($$, $3);
+        if ($1 != NULL){
+            asd_add_child($$, $1);
+        }
+        if ($3 != NULL){
+            asd_add_child($$, $3);
+        }
     };
 
 comando_atribuicao:
     TK_ID TK_PR_IS expressao {
         $$ = asd_new("is"); 
-        asd_add_child($$, asd_new($1->lexema)); 
-        asd_add_child($$, $3);
+        if ($1 != NULL){
+            asd_add_child($$, asd_new($1->lexema)); 
+        }
+        if ($3 != NULL){
+            asd_add_child($$, $3); 
+        }
         free_valor($1);
     } ; 
 
@@ -238,7 +246,9 @@ chamada_funcao:
     TK_ID '(' lista_argumentos ')'  { 
         char *func_name = safe_strconcat("call ", $1->lexema);
         $$ = asd_new(func_name);
-        asd_add_child($$, $3);
+        if ($3 != NULL){
+            asd_add_child($$, $3); 
+        }
         free(func_name);
         free_valor($1);
     } | 
@@ -252,7 +262,9 @@ chamada_funcao:
 comando_retorno:
     TK_PR_RETURN expressao TK_PR_AS tipo { 
         $$ = asd_new("return");
-        asd_add_child($$, $2);
+        if ($2 != NULL){
+            asd_add_child($$, $2); 
+        }
     };
 
 lista_argumentos:
@@ -265,22 +277,30 @@ argumento:
 comandos_controle_fluxo: 
     TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos { 
         $$ = asd_new("if");    
-        asd_add_child($$, $3); 
+        if($3 != NULL){
+            asd_add_child($$, $3); 
+        }
         if($5 != NULL){
             asd_add_child($$, $5); 
         }
-        asd_add_child($$, $7); 
+        if($7 != NULL){
+            asd_add_child($$, $7); 
+        }
     } |  
     TK_PR_IF '(' expressao ')' bloco_comandos { 
         $$ = asd_new("if");     
-        asd_add_child($$, $3);
+        if($3 != NULL){
+            asd_add_child($$, $3); 
+        }
         if($5 != NULL){
             asd_add_child($$, $5); 
         }
     } |
     TK_PR_WHILE '(' expressao ')' bloco_comandos { 
         $$ = asd_new("while");  
-        asd_add_child($$, $3);
+        if($3 != NULL){
+            asd_add_child($$, $3); 
+        }
         if($5 != NULL){
             asd_add_child($$, $5); 
         }
