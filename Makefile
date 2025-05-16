@@ -1,53 +1,40 @@
-# Design Name: Tester.py
-# Project Name: Compiler Tester
-# Description: Makefile for bison + flex compiler
-# Authors:
-#  - Leonardo Kauer Leffa - 00333399
-#  - Luis Eduardo Pereira Mendes - 00333936
+#   Nomes: 
+#   - Leonardo Kauer Leffa
+#   - Luis Eduardo Pereira Mendes
+
+#   turma: B
+  
+#   Data: 18/03/2025
 
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -g -fsanitize=address
+CFLAGS = -Wall -Wextra -g
 LEX = flex
-BISON = bison
 
 # Source files
 LEX_FILE = scanner.l
-BISON_FILE = parser.y
-C_SOURCES = main.c asd.c
-GENERATED_SOURCES = lex.yy.c parser.tab.c
-GENERATED_HEADERS = parser.tab.h
-SOURCES = $(C_SOURCES) $(GENERATED_SOURCES)
-OBJ = $(SOURCES:.c=.o)
+SRC = main.c lex.yy.c
+OBJ = main.o lex.yy.o
 
 # Output binary
-TARGET = etapa3
+TARGET = etapa1
 
-# Default target
-all: $(TARGET) 
+# Rules
+all: $(TARGET)
 
-# Main build rule
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ) -lfl
+	$(CC) $(CFLAGS) -o $@ $^ -lfl
 
-# Flex rule
 lex.yy.c: $(LEX_FILE)
 	$(LEX) -o $@ $<
 
-# Bison rule (generates both .c and .h)
-parser.tab.c parser.tab.h: $(BISON_FILE)
-	$(BISON) -d -o parser.tab.c $<
-# Special rule for main.o since it depends on generated header
-main.o: main.c $(GENERATED_HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@ 
-
-# Pattern rule for other object files
-%.o: %.c
+main.o: main.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean generated files
-clean:
-	rm -f $(OBJ) $(GENERATED_SOURCES) $(GENERATED_HEADERS) $(TARGET)
+lex.yy.o: lex.yy.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Phony targets
+clean:
+	rm -f $(OBJ) lex.yy.c $(TARGET)
+
 .PHONY: all clean
