@@ -10,31 +10,23 @@
     #include <stdlib.h>
     #include <string.h>
     #include "asd.h"
+    #include "errors.h"
+    #include "valor_t.h"
+    #include "table.h"
+
 
     int get_line_number();
     int yylex(void);
     void yyerror (char const *mensagem);
 
     extern asd_tree_t *arvore;
-
-    typedef struct {
-      char *lexema;
-      int line_number;
-      int token_type;
-   } valor_t;
+    table_stack_t *stack;
 
 %}
 
 %{
 
 // Add these helper functions
-static void free_valor(valor_t *val) {
-    if (val) {
-        free(val->lexema);
-        free(val);
-    }
-}
-
 static char *safe_strconcat(const char *s1, const char *s2) {
     char *result;
     if (asprintf(&result, "%s%s", s1, s2) == -1) {
@@ -104,6 +96,12 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %type<no> declaracao_variavel_global
 %type<no> cabecalho
 %type<no> literal
+
+%destructor {
+   if($$ != NULL && $$ != arvore){
+      asd_free($$);
+   }
+} <no>;
 
 %start programa
 
@@ -364,6 +362,16 @@ nivel0:
     termo               { $$ = $1; } |
     chamada_funcao      { $$ = $1; } | 
     '(' expressao ')'   { $$ = $2; } ;
+
+push: {   
+    table_t *table = new_table();
+    push_table(&stack, table);
+    $$ = NULL;
+};
+pop: {
+    pop_table(&stack);
+    $$ = NULL;
+};
 
 %%
 

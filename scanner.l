@@ -1,12 +1,7 @@
 %{
 #include <stdio.h>
 #include "asd.h"
-
-typedef struct {
-      char *lexema;
-      int line_number;
-      int token_type;
-} valor_t;
+#include "valor_t.h"
 
 #include "parser.tab.h"
 
@@ -14,29 +9,6 @@ int line_number = 1;
 
 int get_line_number(void) {
     return line_number;
-}
-
-void set_valor_lexico(int token, char* value){
-    valor_t *aux = NULL;
-    aux = malloc(sizeof(valor_t));
- 
-    // Checks malloc error
-    if(aux == NULL){
-       fprintf(stderr, "Erro de alocação de memória para valor_t\n");
-       exit(1);
-    }
- 
-    aux->line_number = get_line_number();
-    aux->token_type = token;
-    aux->lexema = strdup(value);
-
-    if(aux->lexema == NULL){
-      fprintf(stderr, "Erro de alocação de memória para lexema\n");
-      free(aux);
-      exit(1);
-    }
- 
-    yylval.valor_lexico = aux;
 }
 
 %}
