@@ -2,15 +2,15 @@
 
 typedef struct{
     int line;
-    int nature;
-    int type;
+    nature_t nature;
+    type_t type;
     args_t *args;
-    valor_t value;
+    valor_t *value;
 }entry_t;
 
 typedef struct list_args{
-    int type;
-    valor_t value;
+    type_t type;
+    valor_t *value;
     struct list_args *next_args;
 }args_t;
 
@@ -19,13 +19,13 @@ typedef struct{
     int num_entries;
 }table_t;
 
-table_stack struct table_stack{
+typedef struct table_stack{
     table_t *top;
     struct table_stack *next;
 }table_stack_t;
 
 // Entries
-entry_t new_entry(int line, int nature, int type, valor_t value);
+entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args);
 
 // Tables
 table_t *new_table();

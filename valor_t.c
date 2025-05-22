@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include "valor_t.h"
+#include "parser.tab.h"
 
 static void free_valor(valor_t *val) {
     if (val) {
@@ -13,7 +15,7 @@ void set_valor_lexico(int token, char* value){
  
     // Checks malloc error
     if(aux == NULL){
-       fprintf(stderr, "Erro de alocação de memória para valor_t\n");
+       fprintf(stderr, "Erro de alocacao de memoria para valor_t\n");
        exit(1);
     }
  
@@ -22,7 +24,7 @@ void set_valor_lexico(int token, char* value){
     aux->lexema = strdup(value);
 
     if(aux->lexema == NULL){
-      fprintf(stderr, "Erro de alocação de memória para lexema\n");
+      fprintf(stderr, "Erro de alocacao de memoria para lexema\n");
       free(aux);
       exit(1);
     }

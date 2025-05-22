@@ -3,13 +3,14 @@
 #include <stdio.h>
 #include "asd.h"
 
-asd_tree_t *asd_new(const char *label)
+asd_tree_t *asd_new(const char *label, type_t type)
 {
   asd_tree_t *ret = NULL;
   ret = calloc(1, sizeof(asd_tree_t));
   if (ret != NULL){
     ret->label = strdup(label);
     ret->number_of_children = 0;
+    ret->type = type;
     ret->children = NULL;
   }
   return ret;

@@ -3,19 +3,22 @@
 #include <stdio.h>
 #include "table.h"
 #include "valor_t.h"
+#include "type.h"
 
-entry_t new_entry(int line, int nature, int type, valor_t value, args_t *args)
+entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args)
 {
-    entry_t entry;
-    entry.line = line;
-    entry.nature = nature;
-    entry.type = type;
-    entry.value = value;
-    entry.args = args;
+    entry_t *entry = (entry_t*)malloc(sizeof(entry_t));
+    if (entry == NULL)
+        return;
+    entry->line     = line;
+    entry->nature   = nature;
+    entry->type     = type;
+    entry->value    = value;
+    entry->args     = args;
     return entry;
 }
 
-void add_function_arg(entry_t *entry, valor_t value, int type){
+void add_function_arg(entry_t *entry, valor_t *value, type_t type){
     if (entry == NULL) 
         return;
 
@@ -60,7 +63,7 @@ void add_entry(table_t *table, entry_t *entry)
     table->entries = realloc(table->entries, table->num_entries * sizeof(entry_t));
     table->entries[table->num_entries - 1] = entry;
 
-    entry->value.token_value = strdup(entry->value.token_value);
+    entry->value->lexema = strdup(entry->value->lexema);
 }
 
 entry_t *search_table(table_t *table, char *label)
@@ -71,7 +74,7 @@ entry_t *search_table(table_t *table, char *label)
     for (int i = 0; i < table->num_entries; i++)
     {
         entry_t *entry = table->entries[i];
-        if (!strcmp(entry->value.token_value, label))
+        if (!strcmp(entry->value->lexema, label))
             return entry;
     }
     return NULL;
@@ -87,7 +90,7 @@ void free_table(table_t *table)
     args_t *args_aux = NULL;
     for (i = 0; i < table->num_entries; i++)
     {
-        free(table->entries[i]->value.token_value);
+        free(table->entries[i]->value->lexema);
         free(table->entries[i]);
 
         if(table->entries[i]->args != NULL){
