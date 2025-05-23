@@ -42,6 +42,8 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %union {
     asd_tree_t *no; 
     valor_t *valor_lexico;
+    args_t *args;
+    type_t *type;
 };
 
 %token TK_PR_AS
@@ -85,9 +87,9 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %type<no> sequencia_comandos
 %type<no> lista_argumentos
 %type<no> lista_elementos
-%type<no> lista_parametros
+//%type<no> lista_parametros
 %type<no> elementos_programa
-%type<no> parametro
+//%type<no> parametro
 %type<no> sequencia_opcional_comandos
 %type<no> bloco_comandos
 %type<no> declaracao_variavel
@@ -98,6 +100,12 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 
 %type<no> pop
 %type<no> push
+
+%type<type> tipo
+
+%type<args> parametro
+%type<args> lista_parametros
+%type<args> lista_opcional_parametros
 
 %destructor {
    if($$ != NULL && $$ != arvore){
@@ -140,8 +148,8 @@ elementos_programa:
 // Usados em toda a linguagem
 //-----------------------------------------------------------------------------------------------------------------------
 tipo: 
-    TK_PR_FLOAT | 
-    TK_PR_INT;
+    TK_PR_FLOAT {$$ = FLOAT} | 
+    TK_PR_INT {{$$ = INT}};
 
 bloco_comandos: 
     '[' sequencia_opcional_comandos ']' { $$ = $2; };
@@ -161,9 +169,20 @@ definicao_funcao:
     };
 
 cabecalho: 
-    TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { $$ = asd_new($1->lexema, $3->type); free_valor($1); } | 
-    TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { $$ = asd_new($1->lexema, $3->type); free_valor($1); } ;
+    TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { 
+        entry_t *entry = search_table_stack(stack->top, $1->lexema);
+        if (entry != NULL) {exit(ERR_DECLARED);}
+        entry = new_entry(get_line_number(), N_FUNC, $3, $1->lexema, NULL);
+        add_entry(stack->top, entry);
+        $$ = asd_new($1->lexema, $3); free_valor($1); } |
+    TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { 
+        entry_t *entry = search_table_stack(stack->top, $1->lexema);
+        if (entry != NULL) {exit(ERR_DECLARED);}
+        entry = new_entry(get_line_number(), N_FUNC, $3, $1->lexema, $4);
+        add_entry(stack->top, entry);
+        $$ = asd_new($1->lexema, $3); free_valor($1); } ;
 
+// TODO: lista_opcional_parametros has to return a pointer args_t
 lista_opcional_parametros:
     TK_PR_WITH lista_parametros ;
 
@@ -185,10 +204,10 @@ declaracao_variavel_global:
         if (entry != NULL){
             exit(ERR_DECLARED);
         } else {
-            entry = new_entry(get_line_number(), N_VAR, $4->type, $2->lexema, NULL);
+            entry = new_entry(get_line_number(), N_VAR, $4, $2->lexema, NULL);
             add_entry(stack->top, entry);
         }
-        $$ = asd_new($2->lexema, $4->type);
+        $$ = asd_new($2->lexema, $4);
         free_valor($2);
     };
 
@@ -228,7 +247,7 @@ declaracao_variavel:
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with", $3->type);
         if ($1->type != $3->type)
-            exit(ERR_WRONG_TYPE) // TODO: textinho
+            exit(ERR_WRONG_TYPE)
         if ($1 != NULL){
             asd_add_child($$, $1);
         }
@@ -287,7 +306,8 @@ chamada_funcao:
 
 comando_retorno:
     TK_PR_RETURN expressao TK_PR_AS tipo { 
-        $$ = asd_new("return", /*TODO: BAH N FACO IDEIA PAIZAO*/);
+        // set to INT for now, just for testing...
+        $$ = asd_new("return", INT/*TODO: BAH N FACO IDEIA PAIZAO*/);
         // PRECISA PEGAR O VALOR DA FUNCAO Q TA SENDO RETORNADA
         if ($2 != NULL){
             asd_add_child($$, $2); 
@@ -317,8 +337,9 @@ comandos_controle_fluxo:
         }
     } |  
     TK_PR_IF '(' expressao ')' push bloco_comandos pop { 
-        //TODO: CHECK IF THE TYPES OF THE IF AND ELSE BLOCKS MATCH
-        //ERROR: ERR_WRONG_TYPE
+        if ($3->type != $5->type){
+            exit(ERR_WRONG_TYPE)
+        }
         $$ = asd_new("if", $3->type);     
         if($3 != NULL){
             asd_add_child($$, $3); 
@@ -361,41 +382,59 @@ expressao:
     nivel7 { $$ = $1; };
 
 nivel7:
-    // TODO: check if $1->type and $3->type matches
     nivel6            { $$ = $1; } |
-    nivel7 '|' nivel6 { $$ = asd_new("|", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+    nivel7 '|' nivel6 {
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("|", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);
+    } ;
 
 nivel6:
-    // TODO: check if $1->type and $3->type matches
     nivel5            { $$ = $1; } |
-    nivel6 '&' nivel5 { $$ = asd_new("&", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+    nivel6 '&' nivel5 {
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("&", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel5:
-    // TODO: check if $1->type and $3->type matches
     nivel4                 { $$ = $1; } |
-    nivel5 TK_OC_EQ nivel4 { $$ = asd_new("==", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
-    nivel5 TK_OC_NE nivel4 { $$ = asd_new("!=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+    nivel5 TK_OC_EQ nivel4 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("==", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
+    nivel5 TK_OC_NE nivel4 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("!=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel4:
-    // TODO: check if $1->type and $3->type matches
     nivel3                 { $$ = $1; } |
-    nivel4 '<' nivel3      { $$ = asd_new("<", $2->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
-    nivel4 '>' nivel3      { $$ = asd_new(">", $2->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
-    nivel4 TK_OC_LE nivel3 { $$ = asd_new("<=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} | 
-    nivel4 TK_OC_GE nivel3 { $$ = asd_new(">=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+    nivel4 '<' nivel3      { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("<", $2->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
+    nivel4 '>' nivel3      { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new(">", $2->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
+    nivel4 TK_OC_LE nivel3 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("<=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} | 
+    nivel4 TK_OC_GE nivel3 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new(">=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel3:
-    // TODO: check if $1->type and $3->type matches
     nivel2            { $$ = $1; } |
-    nivel3 '+' nivel2 { $$ = asd_new("+", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
-    nivel3 '-' nivel2 { $$ = asd_new("-", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+    nivel3 '+' nivel2 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("+", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
+    nivel3 '-' nivel2 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("-", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel2:
-    // TODO: check if $1->type and $3->type matches
     nivel1            { $$ = $1; } |
-    nivel2 '*' nivel1 { $$ = asd_new("*", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
-    nivel2 '/' nivel1 { $$ = asd_new("/", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
-    nivel2 '%' nivel1 { $$ = asd_new("%", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
+    nivel2 '*' nivel1 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
+    nivel2 '/' nivel1 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
+    nivel2 '%' nivel1 { 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
     
 nivel1:
     nivel0     { $$ = $1; } |

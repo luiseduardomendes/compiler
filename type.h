@@ -13,4 +13,5 @@ enum enum_nature_t {
 
 typedef enum enum_nature_t nature_t;
 
+
 #endif // _TYPE__T_
