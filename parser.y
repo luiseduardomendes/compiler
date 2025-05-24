@@ -11,39 +11,51 @@
     #include <string.h>
     #include "asd.h"
     #include "errors.h"
-    #include "valor_t.h"
     #include "table.h"
-
+    #include "valor_t.h"
+    #include "parser.tab.h"
+    #include "type.h"
 
     int get_line_number();
     int yylex(void);
     void yyerror (char const *mensagem);
 
-    extern asd_tree_t *arvore;
-    table_stack_t *stack;
-
 %}
 
 %{
+    #include "table.h"
+    extern asd_tree_t *arvore;
+    table_stack_t *stack;
+    
+    type_t type_current_function;
 
-// Add these helper functions
-static char *safe_strconcat(const char *s1, const char *s2) {
-    char *result;
-    if (asprintf(&result, "%s%s", s1, s2) == -1) {
-        yyerror("String concatenation failed");
-        return NULL;
+    // Add these helper functions
+    static char *safe_strconcat(const char *s1, const char *s2) {
+        char *result;
+        if (asprintf(&result, "%s%s", s1, s2) == -1) {
+            yyerror("String concatenation failed");
+            return NULL;
+        }
+        return result;
     }
-    return result;
-}
 %}
 
 %define parse.error verbose
 
+%code requires {
+    #include "asd.h"
+    #include "errors.h"
+    #include "table.h"
+    #include "parser.tab.h"
+    #include "type.h"
+    #include "valor_t.h"
+}
+
 %union {
     asd_tree_t *no; 
     valor_t *valor_lexico;
-    args_t *args;
-    type_t *type;
+    args_t *args_;
+    type_t *type_;
 };
 
 %token TK_PR_AS
@@ -101,11 +113,11 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 %type<no> pop
 %type<no> push
 
-%type<type> tipo
+%type<type_> tipo
 
-%type<args> parametro
-%type<args> lista_parametros
-%type<args> lista_opcional_parametros
+%type<args_> parametro
+%type<args_> lista_parametros
+%type<args_> lista_opcional_parametros
 
 %destructor {
    if($$ != NULL && $$ != arvore){
@@ -120,7 +132,7 @@ static char *safe_strconcat(const char *s1, const char *s2) {
 //  Programa na linguagem
 //-----------------------------------------------------------------------------------------------------------------------
 programa: 
-    push lista_elementos pop ';' { $$ = $1; arvore = $$; } | 
+    push lista_elementos pop ';' { $$ = $2; arvore = $$; } | 
     /*epsilon*/                  { $$ = NULL; arvore = $$; }
     ;
     
@@ -148,11 +160,20 @@ elementos_programa:
 // Usados em toda a linguagem
 //-----------------------------------------------------------------------------------------------------------------------
 tipo: 
-    TK_PR_FLOAT {$$ = FLOAT} | 
-    TK_PR_INT {{$$ = INT}};
+    TK_PR_FLOAT {
+        type_t *type = malloc(sizeof(type_t));
+        *type = FLOAT;
+        $$ = type;
+    } | 
+    TK_PR_INT {
+        type_t *type = malloc(sizeof(type_t));
+        *type = INT;
+        $$ = type;
+    };
 
+// ToDo: verificar se tem algum tipo associado ao bloco_comandos
 bloco_comandos: 
-    '[' sequencia_opcional_comandos ']' { $$ = $2; };
+    '[' push sequencia_opcional_comandos pop ']' { $$ = $3; };
 
 literal: 
     TK_LI_INT   { $$ = asd_new($1->lexema, INT  ); free_valor($1); } | 
@@ -161,7 +182,7 @@ literal:
 // Definicao de Funcao
 //-----------------------------------------------------------------------------------------------------------------------
 definicao_funcao: 
-    push cabecalho bloco_comandos pop {
+     cabecalho bloco_comandos  {
         $$ = $1;  
         if($2 != NULL){
             asd_add_child($$, $2);
@@ -170,29 +191,35 @@ definicao_funcao:
 
 cabecalho: 
     TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { 
-        entry_t *entry = search_table_stack(stack->top, $1->lexema);
+        entry_t *entry = search_table(stack->top, $1->lexema);
         if (entry != NULL) {exit(ERR_DECLARED);}
-        entry = new_entry(get_line_number(), N_FUNC, $3, $1->lexema, NULL);
+        type_current_function = *($3); 
+        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
         add_entry(stack->top, entry);
-        $$ = asd_new($1->lexema, $3); free_valor($1); } |
+        $$ = asd_new($1->lexema, *($3)); free_valor($1); free($3);} |
     TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { 
-        entry_t *entry = search_table_stack(stack->top, $1->lexema);
+        entry_t *entry = search_table(stack->top, $1->lexema);
         if (entry != NULL) {exit(ERR_DECLARED);}
-        entry = new_entry(get_line_number(), N_FUNC, $3, $1->lexema, $4);
+        type_current_function = *($3);
+        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $4);
         add_entry(stack->top, entry);
-        $$ = asd_new($1->lexema, $3); free_valor($1); } ;
+        $$ = asd_new($1->lexema, *($3)); free_valor($1); free($3);} ;
 
-// TODO: lista_opcional_parametros has to return a pointer args_t
 lista_opcional_parametros:
-    TK_PR_WITH lista_parametros ;
+    TK_PR_WITH lista_parametros {$$ = $2;};
 
 lista_parametros: 
-    lista_parametros ',' parametro | 
-    parametro;
+    lista_parametros ',' parametro {
+        $$ = add_arg($1, $3->value, $3->type);
+    }| 
+    parametro{
+        $$ = $1;
+    };
 
 parametro:
     TK_ID TK_PR_AS tipo{
-        free_valor($1);
+        $$ = create_arg($1, *($3)); 
+        free_valor($1); free($3);
     };
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -200,15 +227,16 @@ parametro:
 //-----------------------------------------------------------------------------------------------------------------------
 declaracao_variavel_global: 
     TK_PR_DECLARE TK_ID TK_PR_AS tipo {
-        entry_t *entry = search_table_stack(stack->top, $2->lexema);
+        entry_t *entry = search_table(stack->top, $2->lexema);
         if (entry != NULL){
             exit(ERR_DECLARED);
         } else {
-            entry = new_entry(get_line_number(), N_VAR, $4, $2->lexema, NULL);
+            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL);
             add_entry(stack->top, entry);
         }
-        $$ = asd_new($2->lexema, $4);
+        $$ = asd_new($2->lexema, *($4));
         free_valor($2);
+        free($4);
     };
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -233,9 +261,8 @@ sequencia_comandos:
         }
     };
 
-
 comando_simples:
-    push bloco_comandos pop { $$ = $1; } | 
+    bloco_comandos          { $$ = $1; } | 
     declaracao_variavel     { $$ = $1; } | 
     comando_atribuicao      { $$ = $1; } | 
     comando_retorno         { $$ = $1; } | 
@@ -247,7 +274,7 @@ declaracao_variavel:
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with", $3->type);
         if ($1->type != $3->type)
-            exit(ERR_WRONG_TYPE)
+            exit(ERR_WRONG_TYPE);
         if ($1 != NULL){
             asd_add_child($$, $1);
         }
@@ -258,7 +285,7 @@ declaracao_variavel:
 
 comando_atribuicao:
     TK_ID TK_PR_IS expressao {
-        entry_t *entry_id = search_table_stack(stack->top, $1->lexema);
+        entry_t *entry_id = search_table_stack(stack, $1->lexema);
         if (entry_id == NULL)
             exit(ERR_UNDECLARED);
         if (entry_id->nature == N_FUNC) 
@@ -278,12 +305,14 @@ comando_atribuicao:
 
 chamada_funcao: 
     TK_ID '(' lista_argumentos ')'  { 
-        entry_t *entry = search_table_stack(stack->top, $2->lexema);
+        entry_t *entry = search_table_stack(stack, $1->lexema);
         if (entry == NULL)
             exit(ERR_UNDECLARED);
         if (entry->nature == N_VAR)
             exit(ERR_VARIABLE);
         char *func_name = safe_strconcat("call ", $1->lexema);
+
+        compare_args(entry->args, $3);
         
         $$ = asd_new(func_name, entry->type);
         if ($3 != NULL){
@@ -293,7 +322,7 @@ chamada_funcao:
         free_valor($1);
     } | 
     TK_ID '(' ')' {
-        entry_t *entry = search_table_stack(stack->top, $2->lexema);
+        entry_t *entry = search_table_stack(stack, $1->lexema);
         if (entry == NULL)
             exit(ERR_UNDECLARED);
         if (entry->nature == N_VAR)
@@ -304,28 +333,32 @@ chamada_funcao:
         free_valor($1);  
     } ;
 
-comando_retorno:
-    TK_PR_RETURN expressao TK_PR_AS tipo { 
-        // set to INT for now, just for testing...
-        $$ = asd_new("return", INT/*TODO: BAH N FACO IDEIA PAIZAO*/);
-        // PRECISA PEGAR O VALOR DA FUNCAO Q TA SENDO RETORNADA
-        if ($2 != NULL){
-            asd_add_child($$, $2); 
-        }
-    };
-
 lista_argumentos:
-    argumento ',' lista_argumentos  { $$ = $1; asd_add_child($$, $3); } |
+    argumento ',' lista_argumentos  { 
+        $$ = $1; 
+        asd_add_child($$, $3); } |
     argumento                       { $$ = $1; } ;
 
 argumento:
     expressao { $$ = $1; };
 
+comando_retorno:
+    TK_PR_RETURN expressao TK_PR_AS tipo { 
+        if(type_current_function == *($4)){exit(ERR_WRONG_TYPE);}
+        if(type_current_function == $2->type){exit(ERR_WRONG_TYPE);}
+        $$ = asd_new("return", type_current_function);
+        if ($2 != NULL){
+            asd_add_child($$, $2); 
+        }
+    };
+
 comandos_controle_fluxo: 
     TK_PR_IF '(' expressao ')' push bloco_comandos pop TK_PR_ELSE push bloco_comandos pop { 
-        $$ = asd_new("if", $3->type); 
         if ($6->type != $10->type)
             exit(ERR_WRONG_TYPE);
+
+        $$ = asd_new("if", $3->type); 
+        
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
@@ -337,15 +370,13 @@ comandos_controle_fluxo:
         }
     } |  
     TK_PR_IF '(' expressao ')' push bloco_comandos pop { 
-        if ($3->type != $5->type){
-            exit(ERR_WRONG_TYPE)
-        }
         $$ = asd_new("if", $3->type);     
+
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
-        if($5 != NULL){
-            asd_add_child($$, $5); 
+        if($6 != NULL){
+            asd_add_child($$, $6); 
         }
     } |
     TK_PR_WHILE '(' expressao ')' push bloco_comandos pop { 
@@ -353,14 +384,14 @@ comandos_controle_fluxo:
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
-        if($5 != NULL){
-            asd_add_child($$, $5); 
+        if($6 != NULL){
+            asd_add_child($$, $6); 
         }
     } ;
 
 termo:
     TK_ID {
-        entry_t *entry = search_table_stack(stack->top, $2->lexema);
+        entry_t *entry = search_table_stack(stack, $1->lexema);
         if (entry == NULL)
             exit(ERR_UNDECLARED);
         if (entry->nature != N_VAR){
@@ -392,49 +423,49 @@ nivel6:
     nivel5            { $$ = $1; } |
     nivel6 '&' nivel5 {
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("&", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new("&", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel5:
     nivel4                 { $$ = $1; } |
     nivel5 TK_OC_EQ nivel4 { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("==", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
+        $$ = asd_new("==", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
     nivel5 TK_OC_NE nivel4 { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("!=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new("!=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel4:
     nivel3                 { $$ = $1; } |
     nivel4 '<' nivel3      { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("<", $2->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
+        $$ = asd_new("<", $1->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 '>' nivel3      { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new(">", $2->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
+        $$ = asd_new(">", $1->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 TK_OC_LE nivel3 { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("<=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} | 
+        $$ = asd_new("<=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 TK_OC_GE nivel3 { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new(">=", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new(">=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel3:
     nivel2            { $$ = $1; } |
     nivel3 '+' nivel2 { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("+", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
+        $$ = asd_new("+", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
     nivel3 '-' nivel2 { 
         if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("-", $2->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new("-", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel2:
     nivel1            { $$ = $1; } |
     nivel2 '*' nivel1 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
     nivel2 '/' nivel1 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
     nivel2 '%' nivel1 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $2->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
+        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
     
 nivel1:
     nivel0     { $$ = $1; } |

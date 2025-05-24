@@ -1,4 +1,16 @@
+#ifndef __VALOR_T__
+#define __VALOR_T__
+
+
 #include "valor_t.h"
+#include "type.h"
+#include "asd.h"
+
+typedef struct list_args{
+    type_t type;
+    valor_t *value;
+    struct list_args *next_args;
+}args_t;
 
 typedef struct{
     int line;
@@ -7,12 +19,6 @@ typedef struct{
     args_t *args;
     valor_t *value;
 }entry_t;
-
-typedef struct list_args{
-    type_t type;
-    valor_t *value;
-    struct list_args *next_args;
-}args_t;
 
 typedef struct{
     entry_t **entries;
@@ -24,8 +30,15 @@ typedef struct table_stack{
     struct table_stack *next;
 }table_stack_t;
 
+
 // Entries
 entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args);
+void add_entry(table_t *table, entry_t *entry);
+
+//args
+args_t* create_arg(valor_t *value, type_t type);
+void compare_args(args_t *args, asd_tree_t *node);
+args_t* add_arg(args_t *args, valor_t *value, type_t type);
 
 // Tables
 table_t *new_table();
@@ -39,3 +52,5 @@ void push_table(table_stack_t **table_stack, table_t *new_table);
 void pop_table(table_stack_t **table_stack);
 entry_t *search_table_stack(table_stack_t *table_stack, char *label);
 void free_table_stack(table_stack_t *table_stack);
+
+#endif // __VALOR_T__

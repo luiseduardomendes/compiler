@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "valor_t.h"
-#include "parser.tab.h"
 
-static void free_valor(valor_t *val) {
+
+void free_valor(valor_t *val) {
     if (val) {
         free(val->lexema);
         free(val);

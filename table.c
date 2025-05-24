@@ -4,12 +4,13 @@
 #include "table.h"
 #include "valor_t.h"
 #include "type.h"
+#include "asd.h"
+#include "errors.h"
 
 entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args)
 {
     entry_t *entry = (entry_t*)malloc(sizeof(entry_t));
-    if (entry == NULL)
-        return;
+
     entry->line     = line;
     entry->nature   = nature;
     entry->type     = type;
@@ -18,40 +19,22 @@ entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_
     return entry;
 }
 
-void add_function_arg(entry_t *entry, valor_t *value, type_t type){
-    if (entry == NULL) 
-        return;
-
-    args_t *new_arg = malloc(sizeof(args_t));
-    if (new_arg == NULL) 
-        return;
-
-    new_arg->type = type;
-    new_arg->value = value;
-    new_arg->next_args = NULL;
-        
-    if (entry->args == NULL) {
-        entry->args = new_arg;
-    } 
-    else {
-        args_t *args_aux = entry->args;
-        while (args_aux->next_args != NULL) {
-            args_aux = args_aux->next_args;
+void compare_args(args_t *args, asd_tree_t *node){
+    asd_tree_t *node_aux = node;
+    args_t *args_aux = args;
+    while (node_aux != NULL && args_aux != NULL){
+        if (args_aux->type != node_aux->type){
+            exit(ERR_WRONG_TYPE_ARGS);
         }
-        args_aux->next_args = new_arg;
+        args_aux = args_aux->next_args;
+        node_aux = node_aux->children[0];
     }
-}
-
-table_t *new_table()
-{
-    table_t *table = NULL;
-    table = calloc(1, sizeof(table_t));
-    if (table != NULL)
-    {
-        table->entries = NULL;
-        table->num_entries = 0;
+    if (args_aux->next_args != NULL && node_aux->children[0] == NULL){
+        exit(ERR_MISSING_ARGS);
     }
-    return table;
+    if (args_aux->next_args == NULL && node_aux->children[0] != NULL){
+        exit(ERR_EXCESS_ARGS);
+    }
 }
 
 void add_entry(table_t *table, entry_t *entry)
@@ -64,6 +47,50 @@ void add_entry(table_t *table, entry_t *entry)
     table->entries[table->num_entries - 1] = entry;
 
     entry->value->lexema = strdup(entry->value->lexema);
+}
+
+args_t* create_arg(valor_t *value, type_t type){
+   
+    args_t *new_arg = (args_t*)malloc(sizeof(args_t));
+   
+    new_arg->type = type;
+    new_arg->value = value;
+    new_arg->next_args = NULL;
+        
+    return new_arg;
+}
+
+args_t* add_arg(args_t *args, valor_t *value, type_t type){
+   
+    args_t *new_arg = (args_t*)malloc(sizeof(args_t));
+   
+    new_arg->type = type;
+    new_arg->value = value;
+    new_arg->next_args = NULL;
+        
+    if (args == NULL) {
+        return new_arg;
+    } 
+    
+    args_t *args_aux = args;
+    while (args_aux->next_args != NULL) {
+        args_aux = args_aux->next_args;
+    }
+    args_aux->next_args = new_arg;
+    
+    return args;
+}
+
+table_t *new_table()
+{
+    table_t *table = NULL;
+    table = calloc(1, sizeof(table_t));
+    if (table != NULL)
+    {
+        table->entries = NULL;
+        table->num_entries = 0;
+    }
+    return table;
 }
 
 entry_t *search_table(table_t *table, char *label)
