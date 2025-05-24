@@ -54,8 +54,8 @@
 %union {
     asd_tree_t *no; 
     valor_t *valor_lexico;
-    args_t *args_;
-    type_t *type_;
+    args_t *args;
+    type_t *type;
 };
 
 %token TK_PR_AS
@@ -113,11 +113,11 @@
 %type<no> pop
 %type<no> push
 
-%type<type_> tipo
+%type<type> tipo
 
-%type<args_> parametro
-%type<args_> lista_parametros
-%type<args_> lista_opcional_parametros
+%type<args> parametro
+%type<args> lista_parametros
+%type<args> lista_opcional_parametros
 
 %destructor {
    if($$ != NULL && $$ != arvore){
