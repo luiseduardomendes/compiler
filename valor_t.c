@@ -8,7 +8,9 @@ extern int get_line_number();
 
 void free_valor(valor_t *val) {
     if (val) {
-        free(val->lexema);
+      if (val->lexema){
+         free(val->lexema);
+      }
         free(val);
     }
 }

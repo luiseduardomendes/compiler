@@ -120,10 +120,10 @@
 %type<args> lista_opcional_parametros
 
 %destructor {
-   if($$ != NULL && $$ != arvore){
-      asd_free($$);
-   }
-   free_table_stack(stack);
+    if($$ != NULL && $$ != arvore){
+        asd_free($$);
+    }
+    free_table_stack(stack);
 } <no>;
 
 %start programa
@@ -196,33 +196,33 @@ cabecalho:
         if (entry != NULL) {
             free_valor($1);
             free($3);
+            printf("ERR_DECLARED\n: Line: %d\n", get_line_number());
             exit(ERR_DECLARED);
         }
         type_current_function = *($3); 
         entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
         add_entry(stack->top, entry);
         $$ = asd_new($1->lexema, *($3)); 
-        free_valor($1); 
         free($3);} |
     TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { 
         entry_t *entry = search_table(stack->top, $1->lexema);
         if (entry != NULL) {
             free_valor($1);
             free($3);
+            printf("ERR_DECLARED\n: Line: %d\n", get_line_number());
             exit(ERR_DECLARED);
         }
         type_current_function = *($3);
         entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $4);
         add_entry(stack->top, entry);
         $$ = asd_new($1->lexema, *($3));
-        free_valor($1);
         free($3);} ;
 
 lista_opcional_parametros:
     TK_PR_WITH lista_parametros {$$ = $2;};
 
 lista_parametros: 
-    lista_parametros ',' parametro {
+    parametro ',' lista_parametros{
         $$ = add_arg($1, $3->value, $3->type);
     }| 
     parametro{
@@ -232,7 +232,6 @@ lista_parametros:
 parametro:
     TK_ID TK_PR_AS tipo{
         $$ = create_arg($1, *($3)); 
-        free_valor($1); 
         free($3);
     };
 
@@ -245,13 +244,13 @@ declaracao_variavel_global:
         if (entry != NULL){
             free_valor($2);
             free($4);
+            printf("ERR_DECLARED: Line: %d\n", get_line_number());
             exit(ERR_DECLARED);
         } else {
             entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL);
             add_entry(stack->top, entry);
         }
         $$ = asd_new($2->lexema, *($4));
-        free_valor($2);
         free($4);
     };
 
@@ -289,8 +288,9 @@ declaracao_variavel:
     declaracao_variavel_global { asd_free($1); $$ = NULL; } | 
     declaracao_variavel_global TK_PR_WITH literal { 
         $$ = asd_new("with", $3->type);
-        if ($1->type != $3->type)
-            exit(ERR_WRONG_TYPE);
+        if ($1->type != $3->type){
+            printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());
+            exit(ERR_WRONG_TYPE);}
         if ($1 != NULL){
             asd_add_child($$, $1);
         }
@@ -302,19 +302,26 @@ declaracao_variavel:
 comando_atribuicao:
     TK_ID TK_PR_IS expressao {
         entry_t *entry_id = search_table_stack(stack, $1->lexema);
-        if (entry_id == NULL)
+
+        if(entry_id == NULL){
             free_valor($1);
+            printf("ERR_UNDECLARED: Line: %d\n", get_line_number());
             exit(ERR_UNDECLARED);
-        if (entry_id->nature == N_FUNC) 
+        }
+        if (entry_id->nature == N_FUNC){
             free_valor($1);
+            printf("ERR_FUNCTION: Line: %d\n", get_line_number());
             exit(ERR_FUNCTION);
-        if (entry_id->type != $3->type)
+        }
+        if (entry_id->type != $3->type){
             free_valor($1);
+            printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());
             exit(ERR_WRONG_TYPE);
+        }
         
         $$ = asd_new("is", entry_id->type); 
         if ($1 != NULL){
-            asd_add_child($$, asd_new($1->lexema, entry_id->type)); 
+            asd_add_child($$, asd_new(entry_id->value->lexema, entry_id->type)); 
         }
         if ($3 != NULL){
             asd_add_child($$, $3); 
@@ -325,26 +332,33 @@ comando_atribuicao:
 chamada_funcao: 
     TK_ID '(' lista_argumentos ')'  { 
         entry_t *entry = search_table_stack(stack, $1->lexema);
-        if (entry == NULL)
+        if (entry == NULL){
             free_valor($1);
+            printf("ERR_UNDECLARED chamada_funcao: Line: %d\n", get_line_number());
             exit(ERR_UNDECLARED);
-        if (entry->nature == N_VAR)
+        }
+        if (entry->nature == N_VAR){
             free_valor($1);
+            printf("ERR_VARIABLE\n");
             exit(ERR_VARIABLE);
+        }
         char *func_name = safe_strconcat("call ", $1->lexema);
 
         switch(compare_args(entry->args, $3)){
             case ERR_WRONG_TYPE_ARGS: 
                 free(func_name);
                 free_valor($1);
+                printf("ERR_WRONG_TYPE_ARGS: Line: %d\n", get_line_number());
                 exit(ERR_WRONG_TYPE_ARGS);
             case ERR_MISSING_ARGS: 
                 free(func_name);
                 free_valor($1);
+                printf("ERR_MISSING_ARGS: Line: %d\n", get_line_number());
                 exit(ERR_MISSING_ARGS);
             case ERR_EXCESS_ARGS: 
                 free(func_name);
                 free_valor($1);
+                printf("ERR_EXCESS_ARGS: Line: %d\n", get_line_number());
                 exit(ERR_EXCESS_ARGS);
             case 0: break;
         }
@@ -354,20 +368,22 @@ chamada_funcao:
             asd_add_child($$, $3); 
         }
         free(func_name);
-        free_valor($1);
     } | 
     TK_ID '(' ')' {
         entry_t *entry = search_table_stack(stack, $1->lexema);
-        if (entry == NULL)
+        if (entry == NULL){
             free_valor($1);
+            printf("ERR_UNDECLARED chamada_funcao: Line: %d\n", get_line_number());
             exit(ERR_UNDECLARED);
-        if (entry->nature == N_VAR)
+        }
+        if (entry->nature == N_VAR){
             free_valor($1);
+            printf("ERR_VARIABLE: Line: %d\n", get_line_number());
             exit(ERR_VARIABLE);
+        }
         char *func_name = safe_strconcat("call ", $1->lexema);
         $$ = asd_new(func_name, entry->type);
         free(func_name);
-        free_valor($1);  
     } ;
 
 lista_argumentos:
@@ -381,12 +397,14 @@ argumento:
 
 comando_retorno:
     TK_PR_RETURN expressao TK_PR_AS tipo { 
-        if(type_current_function == *($4)){
+        if(type_current_function != *($4)){
             free($4);
+            printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());
             exit(ERR_WRONG_TYPE);
         }
-        if(type_current_function == $2->type){
+        if(type_current_function != $2->type){
             free($4);
+            printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());
             exit(ERR_WRONG_TYPE);
         }
         $$ = asd_new("return", type_current_function);
@@ -398,8 +416,10 @@ comando_retorno:
 
 comandos_controle_fluxo: 
     TK_PR_IF '(' expressao ')' push bloco_comandos pop TK_PR_ELSE push bloco_comandos pop { 
-        if ($6 != NULL && $10 != NULL && $6->type != $10->type)
+        if ($6 != NULL && $10 != NULL && $6->type != $10->type){
+            printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());
             exit(ERR_WRONG_TYPE);
+        }
 
         $$ = asd_new("if", $3->type); 
         
@@ -436,15 +456,17 @@ comandos_controle_fluxo:
 termo:
     TK_ID {
         entry_t *entry = search_table_stack(stack, $1->lexema);
-        if (entry == NULL)
+        if (entry == NULL){
             free_valor($1);
+            printf("ERR_UNDECLARED: Line: %d\n", get_line_number());
             exit(ERR_UNDECLARED);
+        }
         if (entry->nature != N_VAR){
             free_valor($1);
+            printf("ERR_FUNCTION: Line: %d\n", get_line_number());
             exit(ERR_FUNCTION);
         }
         $$ = asd_new($1->lexema, entry->type);
-        free_valor($1);
     } |
     TK_LI_INT {
         $$ = asd_new($1->lexema, INT);
@@ -461,57 +483,57 @@ expressao:
 nivel7:
     nivel6            { $$ = $1; } |
     nivel7 '|' nivel6 {
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("|", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);
     } ;
 
 nivel6:
     nivel5            { $$ = $1; } |
     nivel6 '&' nivel5 {
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("&", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel5:
     nivel4                 { $$ = $1; } |
     nivel5 TK_OC_EQ nivel4 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("==", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
     nivel5 TK_OC_NE nivel4 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("!=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel4:
     nivel3                 { $$ = $1; } |
     nivel4 '<' nivel3      { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("<", $1->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 '>' nivel3      { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new(">", $1->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 TK_OC_LE nivel3 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("<=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 TK_OC_GE nivel3 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new(">=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel3:
     nivel2            { $$ = $1; } |
     nivel3 '+' nivel2 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("+", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
     nivel3 '-' nivel2 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}
         $$ = asd_new("-", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel2:
     nivel1            { $$ = $1; } |
     nivel2 '*' nivel1 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
     nivel2 '/' nivel1 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
     nivel2 '%' nivel1 { 
-        if ($1->type != $3->type) {exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
+        if ($1->type != $3->type) {printf("ERR_WRONG_TYPE: Line: %d\n", get_line_number());exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
     
 nivel1:
     nivel0     { $$ = $1; } |
