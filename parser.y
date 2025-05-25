@@ -123,6 +123,7 @@
    if($$ != NULL && $$ != arvore){
       asd_free($$);
    }
+   free_table_stack(stack);
 } <no>;
 
 %start programa
@@ -132,7 +133,7 @@
 //  Programa na linguagem
 //-----------------------------------------------------------------------------------------------------------------------
 programa: 
-    push lista_elementos pop ';' { $$ = $2; arvore = $$; } | 
+    push lista_elementos pop ';' { $$ = $2; arvore = $$; stack = new_table_stack();} | 
     /*epsilon*/                  { $$ = NULL; arvore = $$; }
     ;
     
@@ -192,18 +193,30 @@ definicao_funcao:
 cabecalho: 
     TK_ID TK_PR_RETURNS tipo TK_PR_IS                           { 
         entry_t *entry = search_table(stack->top, $1->lexema);
-        if (entry != NULL) {exit(ERR_DECLARED);}
+        if (entry != NULL) {
+            free_valor($1);
+            free($3);
+            exit(ERR_DECLARED);
+        }
         type_current_function = *($3); 
         entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
         add_entry(stack->top, entry);
-        $$ = asd_new($1->lexema, *($3)); free_valor($1); free($3);} |
+        $$ = asd_new($1->lexema, *($3)); 
+        free_valor($1); 
+        free($3);} |
     TK_ID TK_PR_RETURNS tipo lista_opcional_parametros TK_PR_IS { 
         entry_t *entry = search_table(stack->top, $1->lexema);
-        if (entry != NULL) {exit(ERR_DECLARED);}
+        if (entry != NULL) {
+            free_valor($1);
+            free($3);
+            exit(ERR_DECLARED);
+        }
         type_current_function = *($3);
         entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $4);
         add_entry(stack->top, entry);
-        $$ = asd_new($1->lexema, *($3)); free_valor($1); free($3);} ;
+        $$ = asd_new($1->lexema, *($3));
+        free_valor($1);
+        free($3);} ;
 
 lista_opcional_parametros:
     TK_PR_WITH lista_parametros {$$ = $2;};
@@ -219,7 +232,8 @@ lista_parametros:
 parametro:
     TK_ID TK_PR_AS tipo{
         $$ = create_arg($1, *($3)); 
-        free_valor($1); free($3);
+        free_valor($1); 
+        free($3);
     };
 
 //-----------------------------------------------------------------------------------------------------------------------
@@ -229,6 +243,8 @@ declaracao_variavel_global:
     TK_PR_DECLARE TK_ID TK_PR_AS tipo {
         entry_t *entry = search_table(stack->top, $2->lexema);
         if (entry != NULL){
+            free_valor($2);
+            free($4);
             exit(ERR_DECLARED);
         } else {
             entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL);
@@ -287,10 +303,13 @@ comando_atribuicao:
     TK_ID TK_PR_IS expressao {
         entry_t *entry_id = search_table_stack(stack, $1->lexema);
         if (entry_id == NULL)
+            free_valor($1);
             exit(ERR_UNDECLARED);
         if (entry_id->nature == N_FUNC) 
+            free_valor($1);
             exit(ERR_FUNCTION);
         if (entry_id->type != $3->type)
+            free_valor($1);
             exit(ERR_WRONG_TYPE);
         
         $$ = asd_new("is", entry_id->type); 
@@ -307,12 +326,28 @@ chamada_funcao:
     TK_ID '(' lista_argumentos ')'  { 
         entry_t *entry = search_table_stack(stack, $1->lexema);
         if (entry == NULL)
+            free_valor($1);
             exit(ERR_UNDECLARED);
         if (entry->nature == N_VAR)
+            free_valor($1);
             exit(ERR_VARIABLE);
         char *func_name = safe_strconcat("call ", $1->lexema);
 
-        compare_args(entry->args, $3);
+        switch(compare_args(entry->args, $3)){
+            case ERR_WRONG_TYPE_ARGS: 
+                free(func_name);
+                free_valor($1);
+                exit(ERR_WRONG_TYPE_ARGS);
+            case ERR_MISSING_ARGS: 
+                free(func_name);
+                free_valor($1);
+                exit(ERR_MISSING_ARGS);
+            case ERR_EXCESS_ARGS: 
+                free(func_name);
+                free_valor($1);
+                exit(ERR_EXCESS_ARGS);
+            case 0: break;
+        }
         
         $$ = asd_new(func_name, entry->type);
         if ($3 != NULL){
@@ -324,8 +359,10 @@ chamada_funcao:
     TK_ID '(' ')' {
         entry_t *entry = search_table_stack(stack, $1->lexema);
         if (entry == NULL)
+            free_valor($1);
             exit(ERR_UNDECLARED);
         if (entry->nature == N_VAR)
+            free_valor($1);
             exit(ERR_VARIABLE);
         char *func_name = safe_strconcat("call ", $1->lexema);
         $$ = asd_new(func_name, entry->type);
@@ -344,17 +381,24 @@ argumento:
 
 comando_retorno:
     TK_PR_RETURN expressao TK_PR_AS tipo { 
-        if(type_current_function == *($4)){exit(ERR_WRONG_TYPE);}
-        if(type_current_function == $2->type){exit(ERR_WRONG_TYPE);}
+        if(type_current_function == *($4)){
+            free($4);
+            exit(ERR_WRONG_TYPE);
+        }
+        if(type_current_function == $2->type){
+            free($4);
+            exit(ERR_WRONG_TYPE);
+        }
         $$ = asd_new("return", type_current_function);
         if ($2 != NULL){
             asd_add_child($$, $2); 
         }
+        free($4);
     };
 
 comandos_controle_fluxo: 
     TK_PR_IF '(' expressao ')' push bloco_comandos pop TK_PR_ELSE push bloco_comandos pop { 
-        if ($6->type != $10->type)
+        if ($6 != NULL && $10 != NULL && $6->type != $10->type)
             exit(ERR_WRONG_TYPE);
 
         $$ = asd_new("if", $3->type); 
@@ -362,11 +406,11 @@ comandos_controle_fluxo:
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
-        if($5 != NULL){
-            asd_add_child($$, $5); 
+        if($6 != NULL){
+            asd_add_child($$, $6); 
         }
-        if($7 != NULL){
-            asd_add_child($$, $7); 
+        if($10 != NULL){
+            asd_add_child($$, $10); 
         }
     } |  
     TK_PR_IF '(' expressao ')' push bloco_comandos pop { 
@@ -393,8 +437,10 @@ termo:
     TK_ID {
         entry_t *entry = search_table_stack(stack, $1->lexema);
         if (entry == NULL)
+            free_valor($1);
             exit(ERR_UNDECLARED);
         if (entry->nature != N_VAR){
+            free_valor($1);
             exit(ERR_FUNCTION);
         }
         $$ = asd_new($1->lexema, entry->type);

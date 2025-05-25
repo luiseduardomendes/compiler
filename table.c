@@ -19,22 +19,23 @@ entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_
     return entry;
 }
 
-void compare_args(args_t *args, asd_tree_t *node){
+int compare_args(args_t *args, asd_tree_t *node){
     asd_tree_t *node_aux = node;
     args_t *args_aux = args;
     while (node_aux != NULL && args_aux != NULL){
         if (args_aux->type != node_aux->type){
-            exit(ERR_WRONG_TYPE_ARGS);
+            return ERR_WRONG_TYPE_ARGS;
         }
         args_aux = args_aux->next_args;
         node_aux = node_aux->children[0];
     }
     if (args_aux->next_args != NULL && node_aux->children[0] == NULL){
-        exit(ERR_MISSING_ARGS);
+        return ERR_MISSING_ARGS;
     }
     if (args_aux->next_args == NULL && node_aux->children[0] != NULL){
-        exit(ERR_EXCESS_ARGS);
+        return ERR_EXCESS_ARGS;
     }
+    return 0;
 }
 
 void add_entry(table_t *table, entry_t *entry)
@@ -98,11 +99,13 @@ entry_t *search_table(table_t *table, char *label)
     if (table == NULL)
         return NULL;
 
-    for (int i = 0; i < table->num_entries; i++)
-    {
-        entry_t *entry = table->entries[i];
-        if (!strcmp(entry->value->lexema, label))
-            return entry;
+    if (label != NULL){
+        for (int i = 0; i < table->num_entries; i++)
+        {
+            entry_t *entry = table->entries[i];
+            if (!strcmp(entry->value->lexema, label))
+                return entry;
+        }
     }
     return NULL;
 }

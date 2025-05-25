@@ -8,6 +8,6 @@ typedef struct {
 } valor_t;
 
 void set_valor_lexico(int token, char* value);
-// Removed prototype for static function: static void free_valor(valor_t *val);
+void free_valor(valor_t *val);
 
 #endif // VALOR_T_H_

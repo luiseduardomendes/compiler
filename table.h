@@ -37,7 +37,7 @@ void add_entry(table_t *table, entry_t *entry);
 
 //args
 args_t* create_arg(valor_t *value, type_t type);
-void compare_args(args_t *args, asd_tree_t *node);
+int compare_args(args_t *args, asd_tree_t *node);
 args_t* add_arg(args_t *args, valor_t *value, type_t type);
 
 // Tables
