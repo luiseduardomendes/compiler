@@ -13,5 +13,6 @@ enum enum_nature_t {
 
 typedef enum enum_nature_t nature_t;
 
+char *dcd_type(type_t type) ;
 
 #endif // _TYPE__T_

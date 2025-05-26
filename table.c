@@ -29,13 +29,18 @@ void print_table_stack(table_stack_t *table_stack)
 
 entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args)
 {
-    entry_t *entry = (entry_t*)malloc(sizeof(entry_t));
+    entry_t *entry      = (entry_t*)malloc(sizeof(entry_t));
+    valor_t *value_aux  = (valor_t*)malloc(sizeof(valor_t));
+
+    value_aux->lexema      = strdup(value->lexema); 
+    value_aux->line_number = value->line_number;
+    value_aux->token_type  = value->token_type; 
 
     entry->line     = line;
     entry->nature   = nature;
     entry->type     = type;
-    entry->value    = value;
-    entry->args     = args;
+    entry->value    = value_aux;
+    entry->args     = copy_args(args); // <-- deep copy
     return entry;
 }
 
@@ -82,22 +87,30 @@ void add_entry(table_t *table, entry_t *entry)
 args_t* create_arg(valor_t *value, type_t type){
    
     args_t *new_arg = (args_t*)malloc(sizeof(args_t));
-   
+    valor_t *value_aux = (valor_t*)malloc(sizeof(valor_t));
+
+    value_aux->lexema = strdup(value->lexema);
+    value_aux->line_number = value->line_number;
+    value_aux->token_type = value->token_type;
+
     new_arg->type = type;
-    new_arg->value = value;
+    new_arg->value = value_aux;
     new_arg->next_args = NULL;
         
     return new_arg;
 }
 
 args_t* add_arg(args_t *args, valor_t *value, type_t type){
-   
     args_t *new_arg = (args_t*)malloc(sizeof(args_t));
-   
+    valor_t *value_aux = (valor_t*)malloc(sizeof(valor_t));
+    value_aux->lexema = strdup(value->lexema);
+    value_aux->line_number = value->line_number;
+    value_aux->token_type = value->token_type;
+
     new_arg->type = type;
-    new_arg->value = value;
+    new_arg->value = value_aux;
     new_arg->next_args = NULL;
-        
+
     if (args == NULL) {
         return new_arg;
     } 
@@ -148,26 +161,34 @@ void free_table(table_t *table)
     for (i = 0; i < table->num_entries; i++)
     {
         if (table->entries[i]->value){
-            free(table->entries[i]->value->lexema);
-            free(table->entries[i]->value);
+            free_valor(table->entries[i]->value);
         }
         
-        if(table->entries[i]->args != NULL){
-            args = table->entries[i]->args;
-            while (args != NULL){
-                args_aux = args->next_args;
-                if (args->value) { 
-                    free(args->value->lexema);
-                    free(args->value);
-                }
-                free(args);
-                args = args_aux;
-            }
+        if(table->entries[i]->args){
+            free_args(table->entries[i]->args);
         }
         free(table->entries[i]);
     }
     free(table->entries);
     free(table);
+}
+
+void free_args(args_t *args)
+{
+    if (args == NULL)
+        return;
+
+    args_t *args_aux = NULL;
+    while (args != NULL)
+    {
+        args_aux = args->next_args;
+        if (args->value) {
+            free(args->value->lexema);
+            free(args->value);
+        }
+        free(args);
+        args = args_aux;
+    }
 }
 
 table_stack_t *new_table_stack()
@@ -187,38 +208,21 @@ void push_table(table_stack_t **table_stack, table_t *new_table)
     if (new_table == NULL)
         return;
 
-    if (*table_stack == NULL)
-    {
-        *table_stack = new_table_stack();
-    }
-    if ((*table_stack)->top != NULL)
-    {
-        table_stack_t *next = new_table_stack();
-        next->top = (*table_stack)->top;
-        next->next = (*table_stack)->next;
-        (*table_stack)->next = next;
-    }
-    (*table_stack)->top = new_table;
+    table_stack_t *new_node = new_table_stack();
+    new_node->top = new_table;
+    new_node->next = *table_stack;
+    *table_stack = new_node;
 }
 
 void pop_table(table_stack_t **table_stack)
 {
-    if (table_stack == NULL)
+    if (table_stack == NULL || *table_stack == NULL)
         return;
 
-    free_table((*table_stack)->top);
-    if ((*table_stack)->next != NULL)
-    {
-        table_stack_t *aux = (*table_stack)->next;
-        (*table_stack)->top = aux->top;
-        (*table_stack)->next = aux->next;
-        free(aux);
-    }
-    else
-    {
-        free((*table_stack));
-        (*table_stack) = NULL;
-    }
+    table_stack_t *old_top = *table_stack;
+    *table_stack = old_top->next;
+    free_table(old_top->top);
+    free(old_top);
 }
 
 entry_t *search_table_stack(table_stack_t *table_stack, char *label)
@@ -246,4 +250,24 @@ void free_table_stack(table_stack_t *table_stack)
     free_table_stack(table_stack->next);
     free_table(table_stack->top);
     free(table_stack);
+}
+
+args_t* copy_args(const args_t* src) {
+    if (!src) return NULL;
+    args_t* head = NULL;
+    args_t* tail = NULL;
+    while (src) {
+        args_t* node = (args_t*)malloc(sizeof(args_t));
+        node->type = src->type;
+        node->next_args = NULL;
+        node->value = (valor_t*)malloc(sizeof(valor_t));
+        node->value->lexema = strdup(src->value->lexema);
+        node->value->line_number = src->value->line_number;
+        node->value->token_type = src->value->token_type;
+        if (!head) head = node;
+        else tail->next_args = node;
+        tail = node;
+        src = src->next_args;
+    }
+    return head;
 }
