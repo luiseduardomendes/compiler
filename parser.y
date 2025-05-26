@@ -108,7 +108,6 @@
 %type<no> declaracao_variavel
 %type<no> definicao_funcao
 %type<no> declaracao_variavel_global
-%type<no> cabecalho
 %type<no> literal
 
 %type<no> pop
@@ -172,7 +171,6 @@ tipo:
         $$ = type;
     };
 
-// ToDo: verificar se tem algum tipo associado ao bloco_comandos
 bloco_comandos: 
     '[' push sequencia_opcional_comandos pop ']' { $$ = $3; };
 
@@ -182,35 +180,14 @@ literal:
 //-----------------------------------------------------------------------------------------------------------------------
 // Definicao de Funcao
 //-----------------------------------------------------------------------------------------------------------------------
-definicao_funcao: 
-     cabecalho '[' sequencia_opcional_comandos ']' pop {
-        $$ = $1;  
-        if($3 != NULL){
-            asd_add_child($$, $3);
-        }
-    };
 
-cabecalho: 
-    TK_ID TK_PR_RETURNS tipo push TK_PR_IS                           { 
+definicao_funcao: 
+    TK_ID TK_PR_RETURNS tipo push lista_opcional_parametros TK_PR_IS  '[' sequencia_opcional_comandos ']' pop{ 
         entry_t *entry = search_table(stack->top, $1->lexema);
+        
         if (entry != NULL) {
-            free_valor($1);
-            free($3);
-            printf("%sERR_DECLARED: Line: %d\nVariable <%s> already declared%s\n", RED, get_line_number(), $1->lexema, RESET);
-            exit(ERR_DECLARED);
-        }
-        type_current_function = *($3); 
-        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
-        add_entry(stack->top, entry);
-        $$ = asd_new($1->lexema, *($3)); 
-        free_valor($1);
-        free($3);
-        } |
-    TK_ID TK_PR_RETURNS tipo push lista_opcional_parametros TK_PR_IS { 
-        entry_t *entry = search_table(stack->top, $1->lexema);
-        if (entry != NULL) {
-            free_valor($1);
-            free($3);
+            printf("%sERR_DECLARED: Line: %d\nFunction <%s> already declared%s\n", RED, get_line_number(), $1->lexema, RESET);
+            
             if ($5) {
                 args_t *a = $5, *tmp;
                 while (a) {
@@ -222,20 +199,31 @@ cabecalho:
                     a = tmp;
                 }
             }
-            printf("%sERR_DECLARED: Line: %d\nVariable <%s> already declared%s\n", RED, get_line_number(), $1->lexema, RESET);
+            free_valor($1);
+            free($3);
             exit(ERR_DECLARED);
         }
         type_current_function = *($3);
-        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $5);
+        if($5 != NULL)
+            entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $5);
+        else
+            entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
         add_entry(stack->top, entry);
+        
         $$ = asd_new($1->lexema, *($3));
+        
+        if($8 != NULL){
+            asd_add_child($$, $8);
+        }
         free_valor($1);
         free_args($5);
         free($3);
-        } ;
+        
+    } ;
 
 lista_opcional_parametros:
-    TK_PR_WITH lista_parametros {$$ = $2;};
+    TK_PR_WITH lista_parametros {$$ = $2;} |
+    /*epsilon*/{ $$ = NULL; } ;
 
 lista_parametros: 
     parametro ',' lista_parametros{
@@ -441,9 +429,9 @@ comando_retorno:
     };
 
 comandos_controle_fluxo: 
-    TK_PR_IF '(' expressao ')' push bloco_comandos pop TK_PR_ELSE push bloco_comandos pop { 
-        if ($6 != NULL && $10 != NULL && $6->type != $10->type){
-            printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($6->type), dcd_type($10->type), RESET);
+    TK_PR_IF '(' expressao ')' bloco_comandos TK_PR_ELSE bloco_comandos { 
+        if ($5 != NULL && $7 != NULL && $5->type != $7->type){
+            printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($5->type), dcd_type($7->type), RESET);
             exit(ERR_WRONG_TYPE);
         }
 
@@ -452,30 +440,30 @@ comandos_controle_fluxo:
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
-        if($6 != NULL){
-            asd_add_child($$, $6); 
+        if($5 != NULL){
+            asd_add_child($$, $5); 
         }
-        if($10 != NULL){
-            asd_add_child($$, $10); 
+        if($7 != NULL){
+            asd_add_child($$, $7); 
         }
     } |  
-    TK_PR_IF '(' expressao ')' push bloco_comandos pop { 
+    TK_PR_IF '(' expressao ')' bloco_comandos{ 
         $$ = asd_new("if", $3->type);     
 
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
-        if($6 != NULL){
-            asd_add_child($$, $6); 
+        if($5 != NULL){
+            asd_add_child($$, $5); 
         }
     } |
-    TK_PR_WHILE '(' expressao ')' push bloco_comandos pop { 
+    TK_PR_WHILE '(' expressao ')' bloco_comandos{ 
         $$ = asd_new("while", $3->type);  
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
-        if($6 != NULL){
-            asd_add_child($$, $6); 
+        if($5 != NULL){
+            asd_add_child($$, $5); 
         }
     } ;
 
@@ -489,7 +477,7 @@ termo:
         }
         if (entry->nature != N_VAR){
             free_valor($1);
-            printf("%sERR_VARIABLE\nLine: %d\nUsing declared function <%d> as variable%s", RED, get_line_number(), $1->lexema, RESET);
+            printf("%sERR_VARIABLE\nLine: %d\nUsing declared function <%s> as variable%s", RED, get_line_number(), $1->lexema, RESET);
             exit(ERR_FUNCTION);
         }
         $$ = asd_new($1->lexema, entry->type);

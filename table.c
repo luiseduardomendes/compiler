@@ -18,6 +18,8 @@ void print_table(table_t *tabela)
 void print_table_stack(table_stack_t *table_stack)
 {
     int i = 0;
+    printf("Table Stack:\n");
+    printf("=============\n");
     while (table_stack != NULL)
     {
         printf("Index: %d\n", i);
@@ -25,6 +27,7 @@ void print_table_stack(table_stack_t *table_stack)
         table_stack = table_stack->next;
         i++;
     }
+    printf("=============\n");
 }
 
 entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args)
