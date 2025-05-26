@@ -175,19 +175,16 @@ void free_table(table_t *table)
 
 void free_args(args_t *args)
 {
-    if (args == NULL)
-        return;
-
-    args_t *args_aux = NULL;
-    while (args != NULL)
-    {
-        args_aux = args->next_args;
-        if (args->value) {
-            free(args->value->lexema);
-            free(args->value);
+    args_t *current = args;
+    args_t *next_arg;
+    while (current != NULL) {
+        next_arg = current->next_args;
+        if (current->value) {
+            free(current->value->lexema);
+            free(current->value);       
         }
-        free(args);
-        args = args_aux;
+        free(current);
+        current = next_arg;
     }
 }
 
@@ -256,18 +253,29 @@ args_t* copy_args(const args_t* src) {
     if (!src) return NULL;
     args_t* head = NULL;
     args_t* tail = NULL;
-    while (src) {
+    args_t *current;
+    current = src;
+    while (current) {
         args_t* node = (args_t*)malloc(sizeof(args_t));
-        node->type = src->type;
+        node->type = current->type;
         node->next_args = NULL;
-        node->value = (valor_t*)malloc(sizeof(valor_t));
-        node->value->lexema = strdup(src->value->lexema);
-        node->value->line_number = src->value->line_number;
-        node->value->token_type = src->value->token_type;
-        if (!head) head = node;
-        else tail->next_args = node;
+        
+        if (current->value == NULL) {
+            node->value = NULL;
+        } else {
+            node->value = (valor_t*)malloc(sizeof(valor_t));
+            node->value->lexema = strdup(current->value->lexema);
+            node->value->line_number = current->value->line_number;
+            node->value->token_type = current->value->token_type;
+        }
+
+        if (!head) {
+            head = node;
+        } else {
+            tail->next_args = node;
+        }
         tail = node;
-        src = src->next_args;
+        current = current->next_args;
     }
     return head;
 }
