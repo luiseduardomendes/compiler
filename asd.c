@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "asd.h"
 
-asd_tree_t *asd_new(const char *label, type_t type)
+asd_tree_t *asd_new(const char *label, type_t type, char* code, char* reg)
 {
   asd_tree_t *ret = NULL;
   ret = calloc(1, sizeof(asd_tree_t));
@@ -11,6 +11,8 @@ asd_tree_t *asd_new(const char *label, type_t type)
     ret->label = strdup(label);
     ret->number_of_children = 0;
     ret->type = type;
+    ret->code = code ? strdup(code) : NULL;
+    ret->reg = reg ? strdup(reg) : NULL;
     ret->children = NULL;
   }
   return ret;
@@ -25,6 +27,7 @@ void asd_free(asd_tree_t *tree)
     }
     free(tree->children);
     free(tree->label);
+    free(tree->code);
     free(tree);
   }else{
     printf("Erro: %s recebeu parâmetro tree = %p.\n", __FUNCTION__, tree);

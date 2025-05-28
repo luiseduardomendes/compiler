@@ -15,7 +15,9 @@
     #include "valor_t.h"
     #include "parser.tab.h"
     #include "type.h"
+    #include "label.h"
     #include "colors.h"
+
 
     int get_line_number();
     int yylex(void);
@@ -174,9 +176,9 @@ tipo:
 bloco_comandos: 
     '[' push sequencia_opcional_comandos pop ']' { $$ = $3; };
 
-literal: 
-    TK_LI_INT   { $$ = asd_new($1->lexema, INT  ); free_valor($1); } | 
-    TK_LI_FLOAT { $$ = asd_new($1->lexema, FLOAT); free_valor($1); } ;
+literal:  // TODO: Placeholder
+    TK_LI_INT   { $$ = asd_new($1->lexema, INT  , NULL, NULL); free_valor($1); } | 
+    TK_LI_FLOAT { $$ = asd_new($1->lexema, FLOAT, NULL, NULL); free_valor($1); } ;
 //-----------------------------------------------------------------------------------------------------------------------
 // Definicao de Funcao
 //-----------------------------------------------------------------------------------------------------------------------
@@ -210,7 +212,7 @@ definicao_funcao:
             entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
         add_entry(stack->top, entry);
         
-        $$ = asd_new($1->lexema, *($3));
+        $$ = asd_new($1->lexema, *($3), NULL, NULL); // TODO: Placeholder
         
         if($8 != NULL){
             asd_add_child($$, $8);
@@ -261,7 +263,7 @@ declaracao_variavel_global:
             entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL);
             add_entry(stack->top, entry);
         }
-        $$ = asd_new($2->lexema, *($4));
+        $$ = asd_new($2->lexema, *($4), NULL, NULL); // TODO: Placeholder
         free_valor($2);
         free($4);
     };
@@ -299,7 +301,7 @@ comando_simples:
 declaracao_variavel:
     declaracao_variavel_global { asd_free($1); $$ = NULL; } | 
     declaracao_variavel_global TK_PR_WITH literal { 
-        $$ = asd_new("with", $3->type);
+        $$ = asd_new("with", $3->type, NULL, NULL); // TODO: Placeholder
         if ($1->type != $3->type){
             printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);
             exit(ERR_WRONG_TYPE);}
@@ -331,9 +333,9 @@ comando_atribuicao:
             exit(ERR_WRONG_TYPE);
         }
         
-        $$ = asd_new("is", entry_id->type); 
+        $$ = asd_new("is", entry_id->type, NULL, NULL);  // TODO: Placeholder
         if ($1 != NULL){
-            asd_add_child($$, asd_new(entry_id->value->lexema, entry_id->type)); 
+            asd_add_child($$, asd_new(entry_id->value->lexema, entry_id->type, NULL, NULL/*TODO: Placeholder*/)); 
         }
         if ($3 != NULL){
             asd_add_child($$, $3); 
@@ -375,7 +377,7 @@ chamada_funcao:
             case 0: break;
         }
         
-        $$ = asd_new(func_name, entry->type);
+        $$ = asd_new(func_name, entry->type, NULL, NULL/*TODO: Placeholder*/);
         if ($3 != NULL){
             asd_add_child($$, $3); 
         }
@@ -395,7 +397,7 @@ chamada_funcao:
             exit(ERR_VARIABLE);
         }
         char *func_name = safe_strconcat("call ", $1->lexema);
-        $$ = asd_new(func_name, entry->type);
+        $$ = asd_new(func_name, entry->type, NULL, NULL/*TODO: Placeholder*/);
         free(func_name);
         free_valor($1);
     } ;
@@ -421,7 +423,7 @@ comando_retorno:
             free($4);
             exit(ERR_WRONG_TYPE);
         }
-        $$ = asd_new("return", type_current_function);
+        $$ = asd_new("return", type_current_function, NULL, NULL/*TODO: Placeholder*/);
         if ($2 != NULL){
             asd_add_child($$, $2); 
         }
@@ -435,7 +437,7 @@ comandos_controle_fluxo:
             exit(ERR_WRONG_TYPE);
         }
 
-        $$ = asd_new("if", $3->type); 
+        $$ = asd_new("if", $3->type, NULL, NULL/*TODO: Placeholder*/); 
         
         if($3 != NULL){
             asd_add_child($$, $3); 
@@ -448,7 +450,7 @@ comandos_controle_fluxo:
         }
     } |  
     TK_PR_IF '(' expressao ')' bloco_comandos{ 
-        $$ = asd_new("if", $3->type);     
+        $$ = asd_new("if", $3->type, NULL, NULL/*TODO: Placeholder*/);     
 
         if($3 != NULL){
             asd_add_child($$, $3); 
@@ -458,7 +460,7 @@ comandos_controle_fluxo:
         }
     } |
     TK_PR_WHILE '(' expressao ')' bloco_comandos{ 
-        $$ = asd_new("while", $3->type);  
+        $$ = asd_new("while", $3->type, NULL, NULL/*TODO: Placeholder*/);  
         if($3 != NULL){
             asd_add_child($$, $3); 
         }
@@ -480,15 +482,15 @@ termo:
             printf("%sERR_VARIABLE\nLine: %d\nUsing declared function <%s> as variable%s", RED, get_line_number(), $1->lexema, RESET);
             exit(ERR_FUNCTION);
         }
-        $$ = asd_new($1->lexema, entry->type);
+        $$ = asd_new($1->lexema, entry->type, NULL, NULL/*TODO: Placeholder*/);
         free_valor($1);
     } |
     TK_LI_INT {
-        $$ = asd_new($1->lexema, INT);
+        $$ = asd_new($1->lexema, INT, NULL, NULL/*TODO: Placeholder*/);
         free_valor($1);
     } |
     TK_LI_FLOAT {
-        $$ = asd_new($1->lexema, FLOAT);
+        $$ = asd_new($1->lexema, FLOAT, NULL, NULL/*TODO: Placeholder*/);
         free_valor($1);
     } ;
 
@@ -499,63 +501,63 @@ nivel7:
     nivel6            { $$ = $1; } |
     nivel7 '|' nivel6 {
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("|", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);
+        $$ = asd_new("|", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);
     } ;
 
 nivel6:
     nivel5            { $$ = $1; } |
     nivel6 '&' nivel5 {
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("&", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new("&", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel5:
     nivel4                 { $$ = $1; } |
     nivel5 TK_OC_EQ nivel4 { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("==", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
+        $$ = asd_new("==", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} |
     nivel5 TK_OC_NE nivel4 { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("!=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new("!=", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel4:
     nivel3                 { $$ = $1; } |
     nivel4 '<' nivel3      { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("<", $1->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
+        $$ = asd_new("<", $1->type, NULL, NULL/*TODO: Placeholder*/) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 '>' nivel3      { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new(">", $1->type) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
+        $$ = asd_new(">", $1->type, NULL, NULL/*TODO: Placeholder*/) ; asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 TK_OC_LE nivel3 { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("<=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} | 
+        $$ = asd_new("<=", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} | 
     nivel4 TK_OC_GE nivel3 { 
         if ($1->type != $3->type) {
             printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new(">=", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new(">=", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel3:
     nivel2            { $$ = $1; } |
     nivel3 '+' nivel2 { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("+", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} |
+        $$ = asd_new("+", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} |
     nivel3 '-' nivel2 { 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
-        $$ = asd_new("-", $1->type); asd_add_child($$, $1); asd_add_child($$, $3);} ;
+        $$ = asd_new("-", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3);} ;
 
 nivel2:
     nivel1            { $$ = $1; } |
     nivel2 '*' nivel1 { 
-        if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } |
+        if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}$$ = asd_new("*", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3); } |
     nivel2 '/' nivel1 { 
-        if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } | 
+        if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}$$ = asd_new("/", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3); } | 
     nivel2 '%' nivel1 { 
-        if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $1->type); asd_add_child($$, $1); asd_add_child($$, $3); } ;
+        if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}$$ = asd_new("%", $1->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $1); asd_add_child($$, $3); } ;
     
 nivel1:
     nivel0     { $$ = $1; } |
-    '+' nivel1 { $$ = asd_new("+", $2->type); asd_add_child($$, $2); } |
-    '-' nivel1 { $$ = asd_new("-", $2->type); asd_add_child($$, $2); } |
-    '!' nivel1 { $$ = asd_new("!", $2->type); asd_add_child($$, $2); } ;
+    '+' nivel1 { $$ = asd_new("+", $2->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $2); } |
+    '-' nivel1 { $$ = asd_new("-", $2->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $2); } |
+    '!' nivel1 { $$ = asd_new("!", $2->type, NULL, NULL/*TODO: Placeholder*/); asd_add_child($$, $2); } ;
 
 nivel0:
     termo               { $$ = $1; } |
