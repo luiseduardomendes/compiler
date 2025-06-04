@@ -50,30 +50,29 @@ entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_
 int compare_args(args_t *args, asd_tree_t *node){
     asd_tree_t *node_aux = node;
     args_t *args_aux = args;
+    
     while (node_aux != NULL && args_aux != NULL){
         if (args_aux->type != node_aux->type){
             return ERR_WRONG_TYPE_ARGS;
         }
-        args_aux = args_aux->next_args;
-        if (node_aux->number_of_children != 0){
+        if (node_aux->number_of_children != 0 && args_aux != NULL){
+            args_aux = args_aux->next_args;
             node_aux = node_aux->children[0];
         }
         else
             break;
         
     }
-    if (node_aux->number_of_children != 0){
-        if (args_aux->next_args != NULL && node_aux->children[0] == NULL){
-            return ERR_MISSING_ARGS;
-        }
-        if (args_aux->next_args == NULL && node_aux->children[0] != NULL){
-            return ERR_EXCESS_ARGS;
-        }
-    }
-    if (args_aux != NULL && args_aux->next_args == NULL){
-            return ERR_EXCESS_ARGS;
-    }
+
+    if (args_aux == NULL && node_aux == NULL)
+        return 0;
+
+    if (args_aux == NULL && node_aux != NULL)
+    return ERR_EXCESS_ARGS;
     
+    if (args_aux != NULL && node_aux == NULL)
+        return ERR_MISSING_ARGS;
+        
     return 0;
 }
 

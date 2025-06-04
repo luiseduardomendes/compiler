@@ -238,7 +238,13 @@ lista_parametros:
 
 parametro:
     TK_ID TK_PR_AS tipo{
-        entry_t *entry;
+         entry_t *entry = search_table(stack->top, $1->lexema);
+        if (entry != NULL){
+            printf("%sERR_DECLARED: Line: %d\nParameter <%s> already declared%s\n", RED, get_line_number(), $1->lexema, RESET);
+            free($3);
+            free_valor($1);
+            exit(ERR_DECLARED);
+        }
 
         $$ = create_arg($1, *($3));
         entry = new_entry(get_line_number(), N_VAR, *($3), $1, NULL);
@@ -323,8 +329,8 @@ comando_atribuicao:
             exit(ERR_UNDECLARED);
         }
         if (entry_id->nature == N_FUNC){
-            free_valor($1);
             printf("%sERR_FUNCTION: Line: %d\nUsing declared function <%s> as variable%s", RED, get_line_number(), $1->lexema, RESET);
+            free_valor($1);
             exit(ERR_FUNCTION);
         }
         if (entry_id->type != $3->type){
@@ -346,6 +352,7 @@ comando_atribuicao:
 chamada_funcao: 
     TK_ID '(' lista_argumentos ')'  { 
         entry_t *entry = search_table_stack(stack, $1->lexema);
+        print_table_stack(stack);
         if (entry == NULL){
             printf("%sERR_UNDECLARED: Line: %d\nFunction <%s> not declared%s\n", RED, get_line_number(), $1->lexema, RESET);
             free_valor($1);
@@ -386,17 +393,37 @@ chamada_funcao:
     } | 
     TK_ID '(' ')' {
         entry_t *entry = search_table_stack(stack, $1->lexema);
+        print_table_stack(stack);
         if (entry == NULL){
             printf("%sERR_UNDECLARED: Line: %d\nFunction <%s> not declared%s\n", RED, get_line_number(), $1->lexema, RESET);
             free_valor($1);
             exit(ERR_UNDECLARED);
         }
         if (entry->nature == N_VAR){
+           printf("%sERR_VARIABLE\nLine: %d\nUsing declared variable <%s> as function%s", RED, get_line_number(), $1->lexema, RESET);
             free_valor($1);
-            printf("%sERR_VARIABLE\nLine: %d\nUsing declared variable <%s> as function%s", RED, get_line_number(), $1->lexema, RESET);
             exit(ERR_VARIABLE);
         }
         char *func_name = safe_strconcat("call ", $1->lexema);
+        switch(compare_args(entry->args, NULL)){
+            case ERR_WRONG_TYPE_ARGS: 
+                free(func_name);
+                free_valor($1);
+                printf("%sERR_WRONG_TYPE_ARGS: Line: %d%s\n", RED, get_line_number(), RESET);
+                exit(ERR_WRONG_TYPE_ARGS);
+            case ERR_MISSING_ARGS: 
+                free(func_name);
+                free_valor($1);
+                printf("%sERR_MISSING_ARGS: Line: %d%s\n", RED, get_line_number(), RESET);
+                exit(ERR_MISSING_ARGS);
+            case ERR_EXCESS_ARGS: 
+                free(func_name);
+                free_valor($1);
+                printf("%sERR_EXCESS_ARGS: Line: %d%s\n", RED, get_line_number(), RESET);
+                exit(ERR_EXCESS_ARGS);
+            case 0: break;
+        }
+        
         $$ = asd_new(func_name, entry->type, NULL, NULL/*TODO: Placeholder*/);
         free(func_name);
         free_valor($1);
@@ -478,8 +505,8 @@ termo:
             exit(ERR_UNDECLARED);
         }
         if (entry->nature != N_VAR){
-            free_valor($1);
             printf("%sERR_VARIABLE\nLine: %d\nUsing declared function <%s> as variable%s", RED, get_line_number(), $1->lexema, RESET);
+            free_valor($1);
             exit(ERR_FUNCTION);
         }
         $$ = asd_new($1->lexema, entry->type, NULL, NULL/*TODO: Placeholder*/);
