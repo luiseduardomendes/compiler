@@ -4,32 +4,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "iloc.h"
 
-// Function prototypes for code generation
+// Function prototypes for code generation using ILOC instruction lists
 
 // Binary operations
-char* gen_binary_op(const char* op, const char* instr, 
-                   char* left_code, char* left_reg,
-                   char* right_code, char* right_reg);
+iloc_list_t* gen_binary_op(const char* op, const char* instr,
+                          iloc_list_t* left_code, char* left_reg,
+                          iloc_list_t* right_code, char* right_reg,
+                          char** result_reg);
 
 // Unary operations
-char* gen_unary_op(const char* op, const char* instr, 
-                  char* child_code, char* child_reg);
+iloc_list_t* gen_unary_op(const char* op, const char* instr,
+                         iloc_list_t* child_code, char* child_reg,
+                         char** result_reg);
 
 // Constants and variables
-char* gen_const(int value);
-char* gen_var(const char* var_name);
+iloc_list_t* gen_const(int value, char** result_reg);
+iloc_list_t* gen_var(const char* var_name, char** result_reg);
 
 // Assignment
-char* gen_assign(const char* var_name, char* expr_code, char* expr_reg);
+iloc_list_t* gen_assign(const char* var_name, iloc_list_t* expr_code, char* expr_reg);
 
 // Control structures
-char* gen_if(char* cond_code, char* cond_reg, 
-            char* then_code, char* else_code);
-char* gen_while(char* cond_code, char* cond_reg, char* body_code);
+iloc_list_t* gen_if(iloc_list_t* cond_code, char* cond_reg,
+                   iloc_list_t* then_code, iloc_list_t* else_code);
+iloc_list_t* gen_while(iloc_list_t* cond_code, char* cond_reg, iloc_list_t* body_code);
 
 // Helper functions
-void append_code(char** dest, const char* src);
 char* new_reg();  // For temporary register allocation
 
 #endif // __CODE_H__
