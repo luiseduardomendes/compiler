@@ -15,7 +15,7 @@ BISON = bison
 LEX_FILE = scanner.l
 BISON_FILE = parser.y
 # Updated C_SOURCES to include table.c and valor_t.c
-C_SOURCES = main.c asd.c table.c valor_t.c type.c label.c code.c
+C_SOURCES = main.c asd.c table.c valor_t.c type.c label.c code.c iloc.c
 GENERATED_SOURCES = lex.yy.c parser.tab.c
 GENERATED_HEADERS = parser.tab.h
 SOURCES = $(C_SOURCES) $(GENERATED_SOURCES)

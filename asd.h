@@ -1,39 +1,25 @@
-#ifndef _ASD_H_
-#define _ASD_H_
+#ifndef ASD_H
+#define ASD_H
 
 #include "type.h"
+#include "iloc.h"
 
 typedef struct asd_tree {
-  char *label;
-  int number_of_children;
-  type_t type;
-  char *code; 
-  char *reg;
-  struct asd_tree **children;
+    char *label;
+    type_t type;
+    int number_of_children;
+    struct asd_tree **children;
+
+    // For code generation
+    iloc_list_t *code; // Pointer to ILOC code for this node
+    char *place;       // Register/temp holding the result
 } asd_tree_t;
 
-/*
- * Função asd_new, cria um nó sem filhos com o label informado.
- */
-asd_tree_t *asd_new(const char *label, type_t type, char* code, char* reg);
-
-/*
- * Função asd_tree, libera recursivamente o nó e seus filhos.
- */
+// Updated constructor to match new fields
+asd_tree_t *asd_new(const char *label, type_t type, iloc_list_t *code, char *place);
 void asd_free(asd_tree_t *tree);
-
-/*
- * Função asd_add_child, adiciona child como filho de tree.
- */
 void asd_add_child(asd_tree_t *tree, asd_tree_t *child);
-
-/*
- * Função asd_print, imprime recursivamente a árvore.
- */
 void asd_print(asd_tree_t *tree);
+void asd_print_graphviz(asd_tree_t *tree);
 
-/*
- * Função asd_print_graphviz, idem, em formato DOT
- */
-void asd_print_graphviz (asd_tree_t *tree);
-#endif //_ASD_H_
+#endif // ASD_H
