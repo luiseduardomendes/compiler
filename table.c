@@ -59,20 +59,39 @@ int compare_args(args_t *args, asd_tree_t *node){
             args_aux = args_aux->next_args;
             node_aux = node_aux->children[0];
         }
-        else
+        else{
             break;
-        
+        }
     }
 
-    if (args_aux == NULL && node_aux == NULL)
+    if (args_aux == NULL && node_aux == NULL){
         return 0;
+    }
 
-    if (args_aux == NULL && node_aux != NULL)
-    return ERR_EXCESS_ARGS;
+    if (args_aux == NULL && node_aux != NULL){
+        return ERR_EXCESS_ARGS;
+    }
     
-    if (args_aux != NULL && node_aux == NULL)
+    if ((args_aux != NULL && node_aux == NULL) || (args_aux->next_args != NULL && node_aux->number_of_children == 0)){
         return ERR_MISSING_ARGS;
-        
+    }
+    return 0;
+}
+
+int contains_in_args(const args_t *args, const char *search_string) {
+    if (args == NULL || search_string == NULL) {
+        return 0;
+    }
+
+    const args_t *current = args;
+    while (current != NULL) {
+        if (current->value != NULL && current->value->lexema != NULL) {
+            if (strcmp(current->value->lexema, search_string) == 0) {
+                return 1;
+            }
+        }
+        current = current->next_args;
+    }
     return 0;
 }
 
@@ -202,26 +221,43 @@ table_stack_t *new_table_stack()
     return table_stack;
 }
 
-void push_table(table_stack_t **table_stack, table_t *new_table)
-{
+void push_table(table_stack_t **table_stack, table_t *new_table) {
     if (new_table == NULL)
         return;
 
-    table_stack_t *new_node = new_table_stack();
-    new_node->top = new_table;
-    new_node->next = *table_stack;
-    *table_stack = new_node;
+    if (*table_stack == NULL)
+    {
+        *table_stack = new_table_stack();
+    }
+    if ((*table_stack)->top != NULL)
+    {
+        table_stack_t *next = new_table_stack();
+        next->top = (*table_stack)->top;
+        next->next = (*table_stack)->next;
+        (*table_stack)->next = next;
+    }
+    (*table_stack)->top = new_table;
+
 }
 
 void pop_table(table_stack_t **table_stack)
 {
-    if (table_stack == NULL || *table_stack == NULL)
+    if (table_stack == NULL)
         return;
 
-    table_stack_t *old_top = *table_stack;
-    *table_stack = old_top->next;
-    free_table(old_top->top);
-    free(old_top);
+    free_table((*table_stack)->top);
+    if ((*table_stack)->next != NULL)
+    {
+        table_stack_t *aux = (*table_stack)->next;
+        (*table_stack)->top = aux->top;
+        (*table_stack)->next = aux->next;
+        free(aux);
+    }
+    else
+    {
+        free((*table_stack));
+        (*table_stack) = NULL;
+    }
 }
 
 entry_t *search_table_stack(table_stack_t *table_stack, char *label)
