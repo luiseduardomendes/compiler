@@ -78,6 +78,7 @@
 %token TK_OC_GE
 %token TK_OC_EQ
 %token TK_OC_NE
+%token TK_ER
 
 %token <valor_lexico>TK_ID
 %token <valor_lexico>TK_LI_INT
@@ -212,15 +213,9 @@ cabecalho_funcao:
             free($3);
             exit(ERR_DECLARED);
         }
-
-        type_current_function = *($3);
-        if($5 != NULL)
-            entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $5);
-        else
-            entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
-        add_entry(stack->top, entry);
         
-        $$ = asd_new($1->lexema, *($3), $8 ? $8->code : NULL, NULL);
+        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
+        $$ = asd_new($1->lexema, *($3), NULL, NULL);
         
         free_args(args_current_function);
         type_current_function  = *($3);

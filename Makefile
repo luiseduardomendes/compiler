@@ -22,7 +22,7 @@ SOURCES = $(C_SOURCES) $(GENERATED_SOURCES)
 OBJ = $(SOURCES:.c=.o)
 
 # Output binary
-TARGET = etapa4
+TARGET = etapa5
 
 # Default target
 all: $(TARGET) 
