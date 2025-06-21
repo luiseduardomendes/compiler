@@ -54,6 +54,7 @@
     #include "parser.tab.h"
     #include "type.h"
     #include "valor_t.h"
+    #include "iloc.h"
 }
 
 %union {
@@ -141,6 +142,7 @@ lista_elementos:
     elementos_programa ',' lista_elementos {
         if ($1 != NULL && $3 != NULL) {
             asd_add_child($1, $3);
+            $$->code = concat_iloc($1, $3); 
             $$ = $1;
         } else if ($1 != NULL) {
             $$ = $1;
@@ -150,6 +152,7 @@ lista_elementos:
     } |
     elementos_programa {
         $$ = $1;
+        
     };
 
 elementos_programa: 
@@ -185,11 +188,13 @@ definicao_funcao:
     cabecalho_funcao push corpo_funcao pop
     {
         entry_t *entry;
+        
+        $$ = $1;
 
         if($3 != NULL) {
-            asd_add_child($1, $3);
+            asd_add_child($$, $3);
+            $$->code = copy_iloc_list($3->code);
         }
-        $$ = $1;
 
         entry = new_entry(entry_current_function->line, N_FUNC, entry_current_function->type, entry_current_function->value, args_current_function);
 
@@ -199,6 +204,8 @@ definicao_funcao:
         entry_current_function = entry;
 
         add_entry(stack->top, entry_current_function);
+        
+
     };
 
 cabecalho_funcao:
@@ -300,11 +307,11 @@ sequencia_opcional_comandos:
 sequencia_comandos:
     comando_simples {
         $$ = $1;
-    } |
+    }|
     comando_simples sequencia_comandos {
         if ($1 != NULL && $2 != NULL) {
-            $$ = $1;
             asd_add_child($$, $2);
+            $$->code = concat_iloc($1, $2); 
         } else if ($1 != NULL) {
             $$ = $1;
         } else {
@@ -361,12 +368,10 @@ comando_atribuicao:
         }
 
         $$ = asd_new("is", entry_id->type, NULL, NULL);  // TODO: Placeholder
-        if ($1 != NULL){
-            asd_add_child($$, asd_new(entry_id->value->lexema, entry_id->type, NULL, NULL/*TODO: Placeholder*/)); 
+        if ($1 != NULL && $3 != NULL){
+            asd_add_child($$, asd_new(entry_id->value->lexema, entry_id->type, NULL, NULL)); 
             $$->code = gen_assign($1->lexema, $3->code, $3->place);
-        }
-        if ($3 != NULL){
-            asd_add_child($$, $3); 
+            asd_add_child($$, $3);
         }
         free_valor($1);
     } ; 
@@ -421,6 +426,7 @@ chamada_funcao:
         $$ = asd_new(func_name, entry->type, NULL, NULL);
         if ($3 != NULL){
             asd_add_child($$, $3); 
+            $$->code = $3->code; 
         }
         free(func_name);
         free_valor($1);
@@ -571,7 +577,7 @@ nivel7:
 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
         $$ = asd_new("|", $1->type, NULL, NULL);
-        $$->code = gen_binary_op("+", "add", $1->code, $1->place, $3->code, $3->place, &($$->place));
+        $$->code = gen_binary_op("|", "or", $1->code, $1->place, $3->code, $3->place, &($$->place));
         asd_add_child($$, $1);
         asd_add_child($$, $3);
     } ;
@@ -582,7 +588,7 @@ nivel6:
 
         if ($1->type != $3->type) {printf("%sERR_WRONG_TYPE: Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);exit(ERR_WRONG_TYPE);}
         $$ = asd_new("&", $1->type, NULL, NULL);
-        $$->code = gen_binary_op("-", "sub", $1->code, $1->place, $3->code, $3->place, &($$->place));
+        $$->code = gen_binary_op("&", "and", $1->code, $1->place, $3->code, $3->place, &($$->place));
         asd_add_child($$, $1);
         asd_add_child($$, $3);} ;
 

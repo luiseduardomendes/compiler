@@ -18,7 +18,7 @@ char* new_reg() {
 // Generate code for binary operations
 iloc_list_t* gen_binary_op(const char* op, const char* instr, iloc_list_t* left_code, char* left_reg, 
                           iloc_list_t* right_code, char* right_reg, char** result_reg) {
-    iloc_list_t* code = new_iloc_list();
+    iloc_list_t* code = NULL;
     if (left_code) code = concat_iloc(code, left_code);
     if (right_code) code = concat_iloc(code, right_code);
 
@@ -57,7 +57,7 @@ iloc_list_t* gen_var(const char* var_name, char** result_reg) {
 
 // Generate code for assignment
 iloc_list_t* gen_assign(const char* var_name, iloc_list_t* expr_code, char* expr_reg) {
-    iloc_list_t* code = new_iloc_list();
+    iloc_list_t* code = NULL;
     if (expr_code) code = concat_iloc(code, expr_code);
     append_iloc(code, make_iloc(NULL, "store", expr_reg, NULL, var_name));
     return code;
@@ -65,36 +65,56 @@ iloc_list_t* gen_assign(const char* var_name, iloc_list_t* expr_code, char* expr
 
 // Generate code for if statement
 iloc_list_t* gen_if(iloc_list_t* cond_code, char* cond_reg, iloc_list_t* then_code, iloc_list_t* else_code) {
-    iloc_list_t* code = new_iloc_list();
+    iloc_list_t* code = NULL;
+    iloc_list_t* code_aux = NULL;
     char* else_label = new_label();
     char* end_label = new_label();
 
     if (cond_code) code = concat_iloc(code, cond_code);
     append_iloc(code, make_iloc(NULL, "cbr", cond_reg, else_label, end_label));
     append_iloc(code, make_iloc(else_label, NULL, NULL, NULL, NULL));
-    if (then_code) code = concat_iloc(code, then_code);
+    if (then_code) {
+        code_aux = concat_iloc(code, then_code);
+        free_iloc_list(code);
+        code = code_aux;
+    }
 
     if (else_code) {
         append_iloc(code, make_iloc(NULL, "jumpI", NULL, NULL, end_label));
         append_iloc(code, make_iloc(end_label, NULL, NULL, NULL, NULL));
-        code = concat_iloc(code, else_code);
+        code_aux = concat_iloc(code, else_code);
+        free_iloc_list(code);
+        code = code_aux;
     } else {
         append_iloc(code, make_iloc(end_label, NULL, NULL, NULL, NULL));
     }
+    free(else_label);
+    free(end_label);
     return code;
 }
 
 // Generate code for while loop
 iloc_list_t* gen_while(iloc_list_t* cond_code, char* cond_reg, iloc_list_t* body_code) {
     iloc_list_t* code = new_iloc_list();
+    iloc_list_t* code_aux = NULL;
     char* start_label = new_label();
     char* end_label = new_label();
 
     append_iloc(code, make_iloc(start_label, NULL, NULL, NULL, NULL));
-    if (cond_code) code = concat_iloc(code, cond_code);
+    if (cond_code) {
+        code_aux = concat_iloc(code, cond_code);
+        free_iloc_list(code);
+        code = code_aux;
+    }
     append_iloc(code, make_iloc(NULL, "cbr", cond_reg, end_label, start_label));
     append_iloc(code, make_iloc(end_label, NULL, NULL, NULL, NULL));
-    if (body_code) code = concat_iloc(code, body_code);
+    if (body_code){
+       code_aux = concat_iloc(code, body_code);
+       free_iloc_list(code);
+       code = code_aux;
+    }
     append_iloc(code, make_iloc(NULL, "jumpI", NULL, NULL, start_label));
+    free(start_label);
+    free(end_label);
     return code;
 }

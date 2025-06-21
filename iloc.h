@@ -20,6 +20,7 @@ iloc_instr_t* make_iloc(const char *label, const char *opcode, const char *arg1,
 iloc_list_t* new_iloc_list();
 void append_iloc(iloc_list_t *list, iloc_instr_t *instr);
 iloc_list_t* concat_iloc(iloc_list_t *a, iloc_list_t *b);
-void free_iloc_list(iloc_list_t *list); // Add this prototype
+void free_iloc_list(iloc_list_t *list); // Add this 
+ iloc_list_t* copy_iloc_list(const iloc_list_t* src);
 
 #endif

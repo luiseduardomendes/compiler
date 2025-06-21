@@ -26,11 +26,13 @@ void asd_free(asd_tree_t *tree)
         for (i = 0; i < tree->number_of_children; i++) {
             asd_free(tree->children[i]);
         }
+        tree->number_of_children = 0;
         free(tree->children);
         free(tree->label);
         if (tree->place) free(tree->place);
-        if (tree->code) free_iloc_list(tree->code); // You must implement this in iloc.c
+        if (tree->code) free_iloc_list(tree->code);
         free(tree);
+        tree = NULL;
     } else {
         printf("Erro: %s recebeu parâmetro tree = %p.\n", __FUNCTION__, tree);
     }
@@ -93,5 +95,20 @@ void asd_print_graphviz(asd_tree_t *tree)
         fprintf(foutput, "}\n");
     } else {
         printf("Erro: %s recebeu parâmetro tree = %p.\n", __FUNCTION__, tree);
+    }
+}
+
+void print_code(iloc_list_t *code) {
+    if (code == NULL || code->head == NULL) {
+        printf("No ILOC code to print.\n");
+        return;
+    }
+    iloc_instr_t *current = code->head;
+    while (current != NULL) {
+        printf("%s: %s %s, %s -> %s\n", current->label ? current->label : " ", current->opcode, 
+               current->arg1 ? current->arg1 : " ", 
+               current->arg2 ? current->arg2 : " ", 
+               current->result ? current->result : " ");
+        current = current->next;
     }
 }
