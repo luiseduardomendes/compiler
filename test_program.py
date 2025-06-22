@@ -6,7 +6,7 @@ def run_tests():
     # Define paths
     e4_dir = "./E4"
     t_e4_path = os.path.join(e4_dir, "golden.txt")
-    program_path = "./etapa4"
+    program_path = "./etapa5"
     
     # Define the timeout in seconds
     TIMEOUT_SECONDS = 2

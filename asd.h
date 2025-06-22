@@ -21,5 +21,6 @@ void asd_free(asd_tree_t *tree);
 void asd_add_child(asd_tree_t *tree, asd_tree_t *child);
 void asd_print(asd_tree_t *tree);
 void asd_print_graphviz(asd_tree_t *tree);
+void print_code(iloc_list_t *code);
 
 #endif // ASD_H

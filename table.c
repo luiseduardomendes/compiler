@@ -30,7 +30,7 @@ void print_table_stack(table_stack_t *table_stack)
     printf("=============\n");
 }
 
-entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args)
+entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args, int is_global, int offset)
 {
     entry_t *entry      = (entry_t*)malloc(sizeof(entry_t));
     valor_t *value_aux  = (valor_t*)malloc(sizeof(valor_t));
@@ -39,11 +39,13 @@ entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_
     value_aux->line_number = value->line_number;
     value_aux->token_type  = value->token_type; 
 
-    entry->line     = line;
-    entry->nature   = nature;
-    entry->type     = type;
-    entry->value    = value_aux;
-    entry->args     = copy_args(args); // <-- deep copy
+    entry->line      = line;
+    entry->nature    = nature;
+    entry->type      = type;
+    entry->value     = value_aux;
+    entry->is_global = is_global;
+    entry->offset    = offset;
+    entry->args      = copy_args(args); // <-- deep copy
     return entry;
 }
 
@@ -316,4 +318,18 @@ args_t* copy_args(const args_t* src) {
         current = current->next_args;
     }
     return head;
+}
+
+int is_var_global(table_stack_t* stack, const char* name) {
+   entry_t *entry = search_table_stack(stack, name);
+   if (entry != NULL) {
+        return entry->is_global;
+    }
+
+    // Se não encontrou na tabela não é uma variável global.
+    return 0;
+}
+
+char* get_base_of(table_stack_t* stack, const char* name){
+   return is_var_global(stack, name) == 1 ? "rbss" : "rfp";
 }
