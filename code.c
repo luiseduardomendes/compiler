@@ -1,6 +1,7 @@
 #include "code.h"
 #include "label.h"
 #include "iloc.h"
+#include "table.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,66 +42,47 @@ iloc_list_t* gen_unary_op(const char* op, const char* instr, iloc_list_t* child_
 iloc_list_t* gen_const(int value, char** result_reg) {
     iloc_list_t* code = new_iloc_list();
     *result_reg = new_reg();
-    char val_str[16];
+    char *val_str = malloc(16);
     sprintf(val_str, "%d", value);
     append_iloc(code, make_iloc(NULL, "loadI", val_str, NULL, *result_reg));
+    free(val_str);
     return code;
 }
 
 // Generate code for variables
-iloc_list_t* gen_var(const char* var_name, char** result_reg) {
+iloc_list_t* gen_var(table_stack_t* stack, const char* var_name, char** result_reg) {
     iloc_list_t* code = new_iloc_list();
     *result_reg = new_reg();
 
-    entry_t *entry = search_table_stack(sua_pilha_de_tabelas, var_name);
-    if (!entry) { /* ... tratar erro ... */ }
-    
-    char* base_reg = (is_global(stack, var_name)) ? "rbss" : "rfp";
-    int offset = entry->offset;
-    char offset_str[16];
-    sprintf(offset_str, "%d", offset);
-
-    append_iloc(code, make_iloc(NULL, "loadAI", base_reg, offset_str, *result_reg));
-    return code;
-}
-
-// Em code.c (exemplo conceitual, você precisará adaptar com sua busca na tabela)
-iloc_list_t* gen_var_access(const char* var_name, char** result_reg) {
-    
-    // 1. Buscar na tabela de símbolos
     entry_t *entry = search_table_stack(stack, var_name);
-    if (!entry) { /* ... tratar erro de variável não declarada ... */ }
-
-    // 2. Determinar o registrador de base e o offset
-    char* base_reg = (is_global(stack, var_name)) ? "rbss" : "rfp"; // Você precisa de uma lógica para saber o escopo
+    
+    char* base_reg = get_base_of(stack, var_name);
     int offset = entry->offset;
-    char offset_str[16];
+    char *offset_str = malloc(16);
     sprintf(offset_str, "%d", offset);
-    
-    // 3. Gerar o código ILOC correto
-    iloc_list_t* code = new_iloc_list();
-    *result_reg = new_reg();
-    
-    // Gera: loadAI <base_reg>, <offset> => <novo_registrador>
+
     append_iloc(code, make_iloc(NULL, "loadAI", base_reg, offset_str, *result_reg));
-    
+    free(offset_str);
+   //  free(base_reg);
     return code;
 }
 
 // Generate code for assignment
-iloc_list_t* gen_assign(const char* var_name, iloc_list_t* expr_code, char* expr_reg) {
+iloc_list_t* gen_assign(table_stack_t* stack, const char* var_name, iloc_list_t* expr_code, char* expr_reg) {
     iloc_list_t* code = NULL;
 
     entry_t *entry = search_table_stack(stack, var_name);
-    if (!entry) { /* ... tratar erro ... */ }
 
-    char* base_reg = (is_global(stack, var_name)) ? "rbss" : "rfp";
+    char* base_reg = get_base_of(stack, var_name);
     int offset = entry->offset;
-    char offset_str[16];
+    char *offset_str = malloc(16);
     sprintf(offset_str, "%d", offset);
 
     if (expr_code) code = concat_iloc(code, expr_code);
     append_iloc(code, make_iloc(NULL, "storeAI", expr_reg, base_reg, offset_str));
+
+    free(offset_str);
+
     return code;
 }
 
@@ -113,7 +95,7 @@ iloc_list_t* gen_if(iloc_list_t* cond_code, char* cond_reg, iloc_list_t* then_co
 
     if (cond_code) code = concat_iloc(code, cond_code);
     append_iloc(code, make_iloc(NULL, "cbr", cond_reg, else_label, end_label));
-    append_iloc(code, make_iloc(else_label, NULL, NULL, NULL, NULL));
+    append_iloc(code, make_iloc(else_label, "nop", NULL, NULL, NULL));
     if (then_code) {
         code_aux = concat_iloc(code, then_code);
         free_iloc_list(code);
@@ -122,12 +104,12 @@ iloc_list_t* gen_if(iloc_list_t* cond_code, char* cond_reg, iloc_list_t* then_co
 
     if (else_code) {
         append_iloc(code, make_iloc(NULL, "jumpI", NULL, NULL, end_label));
-        append_iloc(code, make_iloc(end_label, NULL, NULL, NULL, NULL));
+        append_iloc(code, make_iloc(end_label, "nop", NULL, NULL, NULL));
         code_aux = concat_iloc(code, else_code);
         free_iloc_list(code);
         code = code_aux;
     } else {
-        append_iloc(code, make_iloc(end_label, NULL, NULL, NULL, NULL));
+        append_iloc(code, make_iloc(end_label, "nop", NULL, NULL, NULL));
     }
     free(else_label);
     free(end_label);
@@ -141,14 +123,14 @@ iloc_list_t* gen_while(iloc_list_t* cond_code, char* cond_reg, iloc_list_t* body
     char* start_label = new_label();
     char* end_label = new_label();
 
-    append_iloc(code, make_iloc(start_label, NULL, NULL, NULL, NULL));
+    append_iloc(code, make_iloc(start_label, "nop", NULL, NULL, NULL));
     if (cond_code) {
         code_aux = concat_iloc(code, cond_code);
         free_iloc_list(code);
         code = code_aux;
     }
     append_iloc(code, make_iloc(NULL, "cbr", cond_reg, end_label, start_label));
-    append_iloc(code, make_iloc(end_label, NULL, NULL, NULL, NULL));
+    append_iloc(code, make_iloc(end_label, "nop", NULL, NULL, NULL));
     if (body_code){
        code_aux = concat_iloc(code, body_code);
        free_iloc_list(code);

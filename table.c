@@ -320,7 +320,7 @@ args_t* copy_args(const args_t* src) {
     return head;
 }
 
-int is_global(table_stack_t* stack, const char* name) {
+int is_var_global(table_stack_t* stack, const char* name) {
    entry_t *entry = search_table_stack(stack, name);
    if (entry != NULL) {
         return entry->is_global;
@@ -328,4 +328,8 @@ int is_global(table_stack_t* stack, const char* name) {
 
     // Se não encontrou na tabela não é uma variável global.
     return 0;
+}
+
+char* get_base_of(table_stack_t* stack, const char* name){
+   return is_var_global(stack, name) == 1 ? "rbss" : "rfp";
 }

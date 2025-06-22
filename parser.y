@@ -21,6 +21,8 @@
     #include "iloc.h"
 
     #define VAR_SIZE 4 // Assuming each variable takes 4 bytes
+    #define LOCAL    0
+    #define GLOBAL   1
 
     int get_line_number();
     int yylex(void);
@@ -83,6 +85,7 @@
 %token TK_OC_GE
 %token TK_OC_EQ
 %token TK_OC_NE
+%token TK_ER
 
 %token <valor_lexico>TK_ID
 %token <valor_lexico>TK_LI_INT
@@ -147,7 +150,7 @@ lista_elementos:
     elementos_programa ',' lista_elementos {
         if ($1 != NULL && $3 != NULL) {
             asd_add_child($1, $3);
-            $$->code = concat_iloc($1, $3); 
+            $$->code = concat_iloc($1->code, $3->code); 
             $$ = $1;
         } else if ($1 != NULL) {
             $$ = $1;
@@ -201,7 +204,7 @@ definicao_funcao:
             $$->code = copy_iloc_list($3->code);
         }
 
-        entry = new_entry(entry_current_function->line, N_FUNC, entry_current_function->type, entry_current_function->value, args_current_function);
+        entry = new_entry(entry_current_function->line, N_FUNC, entry_current_function->type, entry_current_function->value, args_current_function, GLOBAL, 0);
 
         free_valor(entry_current_function->value);
         free(entry_current_function);
@@ -225,7 +228,7 @@ cabecalho_funcao:
             exit(ERR_DECLARED);
         }
         
-        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
+        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL, GLOBAL, 0);
         $$ = asd_new($1->lexema, *($3), NULL, NULL);
         
         free_args(args_current_function);
@@ -268,7 +271,10 @@ parametro:
         }
 
         $$ = create_arg($1, *($3));
-        entry = new_entry(get_line_number(), N_VAR, *($3), $1, NULL);
+
+        local_offset       += VAR_SIZE;
+
+        entry = new_entry(get_line_number(), N_VAR, *($3), $1, NULL, LOCAL, local_offset);
 
         add_entry(stack->top, entry);
         free_valor($1);
@@ -282,7 +288,6 @@ declaracao_variavel_global:
     TK_PR_DECLARE TK_ID TK_PR_AS tipo {
         entry_t *entry = search_table(stack->top, $2->lexema);
 
-        offset_da_variavel = global_offset;
         global_offset += VAR_SIZE; // Atualiza o contador global
 
         if (entry != NULL || (stack->next != NULL && args_current_function != NULL && contains_in_args(args_current_function, $2->lexema) == 1)){
@@ -291,7 +296,7 @@ declaracao_variavel_global:
             free_valor($2);
             exit(ERR_DECLARED);
         } else {
-            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL, offset_da_variavel);
+            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL, GLOBAL, global_offset);
             add_entry(stack->top, entry);
         }
         $$ = asd_new($2->lexema, *($4), NULL, NULL); 
@@ -313,7 +318,7 @@ sequencia_comandos:
     comando_simples sequencia_comandos {
         if ($1 != NULL && $2 != NULL) {
             asd_add_child($$, $2);
-            $$->code = concat_iloc($1, $2); 
+            $$->code = concat_iloc($1->code, $2->code); 
         } else if ($1 != NULL) {
             $$ = $1;
         } else {
@@ -332,7 +337,7 @@ comando_simples:
 declaracao_variavel:
     declaracao_variavel_local { asd_free($1); $$ = NULL; } | 
     declaracao_variavel_local TK_PR_WITH literal { 
-        $$ = asd_new("with", $3->type, gen_assign($1->label, $3->code, $3->place), NULL);
+        $$ = asd_new("with", $3->type, gen_assign(stack, $1->label, $3->code, $3->place), NULL);
         if ($1->type != $3->type){
             printf("%sERR_WRONG_TYPE : Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);
             exit(ERR_WRONG_TYPE);}
@@ -347,7 +352,6 @@ declaracao_variavel:
 declaracao_variavel_local: TK_PR_DECLARE TK_ID TK_PR_AS tipo {
         entry_t *entry = search_table(stack->top, $2->lexema);
 
-         offset_da_variavel = local_offset;
          local_offset += VAR_SIZE; // Atualiza o contador local
 
         if (entry != NULL || (stack->next != NULL && args_current_function != NULL && contains_in_args(args_current_function, $2->lexema) == 1)){
@@ -356,7 +360,7 @@ declaracao_variavel_local: TK_PR_DECLARE TK_ID TK_PR_AS tipo {
             free_valor($2);
             exit(ERR_DECLARED);
         } else {
-            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL, offset_da_variavel);
+            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL, LOCAL, local_offset);
             add_entry(stack->top, entry);
         }
         $$ = asd_new($2->lexema, *($4), NULL, NULL); 
@@ -392,7 +396,7 @@ comando_atribuicao:
         $$ = asd_new("is", entry_id->type, NULL, NULL);  // TODO: Placeholder
         if ($1 != NULL && $3 != NULL){
             asd_add_child($$, asd_new(entry_id->value->lexema, entry_id->type, NULL, NULL)); 
-            $$->code = gen_assign($1->lexema, $3->code, $3->place);
+            $$->code = gen_assign(stack, $1->lexema, $3->code, $3->place);
             asd_add_child($$, $3);
         }
         free_valor($1);
@@ -574,7 +578,7 @@ termo:
             exit(ERR_FUNCTION);
         }
         $$ = asd_new($1->lexema, entry->type, NULL, NULL);
-        $$->code = gen_var($1->lexema, &($$->place));
+        $$->code = gen_var(stack, $1->lexema, &($$->place));
         free_valor($1);
     } |
     TK_LI_INT {

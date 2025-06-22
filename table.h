@@ -57,6 +57,7 @@ void push_table(table_stack_t **table_stack, table_t *new_table);
 void pop_table(table_stack_t **table_stack);
 entry_t *search_table_stack(table_stack_t *table_stack, char *label);
 void free_table_stack(table_stack_t *table_stack);
-int is_global(table_stack_t* stack, const char* name);
+int is_var_global(table_stack_t* stack, const char* name);
+char* get_base_of(table_stack_t* stack, const char* name);
 
 #endif // __VALOR_T__

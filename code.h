@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "table.h"
 #include "iloc.h"
 
 // Function prototypes for code generation using ILOC instruction lists
@@ -21,10 +22,10 @@ iloc_list_t* gen_unary_op(const char* op, const char* instr,
 
 // Constants and variables
 iloc_list_t* gen_const(int value, char** result_reg);
-iloc_list_t* gen_var(const char* var_name, char** result_reg);
+iloc_list_t* gen_var(table_stack_t* stack, const char* var_name, char** result_reg);
 
 // Assignment
-iloc_list_t* gen_assign(const char* var_name, iloc_list_t* expr_code, char* expr_reg);
+iloc_list_t* gen_assign(table_stack_t* stack, const char* var_name, iloc_list_t* expr_code, char* expr_reg);
 
 // Control structures
 iloc_list_t* gen_if(iloc_list_t* cond_code, char* cond_reg,
