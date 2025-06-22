@@ -18,6 +18,8 @@ typedef struct{
     type_t type;
     args_t *args;
     valor_t *value;
+    int is_global;
+    int offset; 
 }entry_t;
 
 typedef struct{
@@ -32,7 +34,7 @@ typedef struct table_stack{
 
 
 // Entries
-entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args);
+entry_t* new_entry(int line, nature_t nature, type_t type, valor_t *value, args_t *args, int is_global, int offset);
 void add_entry(table_t *table, entry_t *entry);
 
 //args
@@ -55,5 +57,6 @@ void push_table(table_stack_t **table_stack, table_t *new_table);
 void pop_table(table_stack_t **table_stack);
 entry_t *search_table_stack(table_stack_t *table_stack, char *label);
 void free_table_stack(table_stack_t *table_stack);
+int is_global(table_stack_t* stack, const char* name);
 
 #endif // __VALOR_T__

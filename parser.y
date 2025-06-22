@@ -20,6 +20,8 @@
     #include "code.h"
     #include "iloc.h"
 
+    #define VAR_SIZE 4 // Assuming each variable takes 4 bytes
+
     int get_line_number();
     int yylex(void);
     void yyerror (char const *mensagem);
@@ -28,6 +30,8 @@
 
 %{
     #include "table.h"
+    static int global_offset = 0;
+    static int local_offset = 0; 
     extern asd_tree_t *arvore;
     table_stack_t *stack;
     type_t   type_current_function;
@@ -108,6 +112,7 @@
 %type<no> sequencia_opcional_comandos
 %type<no> bloco_comandos
 %type<no> declaracao_variavel
+%type<no> declaracao_variavel_local
 %type<no> definicao_funcao
 %type<no> corpo_funcao
 %type<no> cabecalho_funcao
@@ -219,15 +224,9 @@ cabecalho_funcao:
             free($3);
             exit(ERR_DECLARED);
         }
-
-        type_current_function = *($3);
-        if($5 != NULL)
-            entry = new_entry(get_line_number(), N_FUNC, *($3), $1, $5);
-        else
-            entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
-        add_entry(stack->top, entry);
         
-        $$ = asd_new($1->lexema, *($3), $8 ? $8->code : NULL, NULL);
+        entry = new_entry(get_line_number(), N_FUNC, *($3), $1, NULL);
+        $$ = asd_new($1->lexema, *($3), NULL, NULL);
         
         free_args(args_current_function);
         type_current_function  = *($3);
@@ -283,13 +282,16 @@ declaracao_variavel_global:
     TK_PR_DECLARE TK_ID TK_PR_AS tipo {
         entry_t *entry = search_table(stack->top, $2->lexema);
 
+        offset_da_variavel = global_offset;
+        global_offset += VAR_SIZE; // Atualiza o contador global
+
         if (entry != NULL || (stack->next != NULL && args_current_function != NULL && contains_in_args(args_current_function, $2->lexema) == 1)){
             printf("%sERR_DECLARED : Line: %d\nVariable <%s> already declared%s\n", RED, get_line_number(), $2->lexema, RESET);
             free($4);
             free_valor($2);
             exit(ERR_DECLARED);
         } else {
-            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL);
+            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL, offset_da_variavel);
             add_entry(stack->top, entry);
         }
         $$ = asd_new($2->lexema, *($4), NULL, NULL); 
@@ -328,8 +330,8 @@ comando_simples:
     comandos_controle_fluxo { $$ = $1; } ;
 
 declaracao_variavel:
-    declaracao_variavel_global { asd_free($1); $$ = NULL; } | 
-    declaracao_variavel_global TK_PR_WITH literal { 
+    declaracao_variavel_local { asd_free($1); $$ = NULL; } | 
+    declaracao_variavel_local TK_PR_WITH literal { 
         $$ = asd_new("with", $3->type, gen_assign($1->label, $3->code, $3->place), NULL);
         if ($1->type != $3->type){
             printf("%sERR_WRONG_TYPE : Line: %d\nType <%s> does not match <%s>%s\n", RED, get_line_number(), dcd_type($1->type), dcd_type($3->type), RESET);
@@ -340,6 +342,26 @@ declaracao_variavel:
         if ($3 != NULL){
             asd_add_child($$, $3);
         }
+    };
+
+declaracao_variavel_local: TK_PR_DECLARE TK_ID TK_PR_AS tipo {
+        entry_t *entry = search_table(stack->top, $2->lexema);
+
+         offset_da_variavel = local_offset;
+         local_offset += VAR_SIZE; // Atualiza o contador local
+
+        if (entry != NULL || (stack->next != NULL && args_current_function != NULL && contains_in_args(args_current_function, $2->lexema) == 1)){
+            printf("%sERR_DECLARED : Line: %d\nVariable <%s> already declared%s\n", RED, get_line_number(), $2->lexema, RESET);
+            free($4);
+            free_valor($2);
+            exit(ERR_DECLARED);
+        } else {
+            entry = new_entry(get_line_number(), N_VAR, *($4), $2, NULL, offset_da_variavel);
+            add_entry(stack->top, entry);
+        }
+        $$ = asd_new($2->lexema, *($4), NULL, NULL); 
+        free_valor($2);
+        free($4);
     };
 
 comando_atribuicao:

@@ -51,15 +51,56 @@ iloc_list_t* gen_const(int value, char** result_reg) {
 iloc_list_t* gen_var(const char* var_name, char** result_reg) {
     iloc_list_t* code = new_iloc_list();
     *result_reg = new_reg();
-    append_iloc(code, make_iloc(NULL, "load", var_name, NULL, *result_reg));
+
+    entry_t *entry = search_table_stack(sua_pilha_de_tabelas, var_name);
+    if (!entry) { /* ... tratar erro ... */ }
+    
+    char* base_reg = (is_global(stack, var_name)) ? "rbss" : "rfp";
+    int offset = entry->offset;
+    char offset_str[16];
+    sprintf(offset_str, "%d", offset);
+
+    append_iloc(code, make_iloc(NULL, "loadAI", base_reg, offset_str, *result_reg));
+    return code;
+}
+
+// Em code.c (exemplo conceitual, você precisará adaptar com sua busca na tabela)
+iloc_list_t* gen_var_access(const char* var_name, char** result_reg) {
+    
+    // 1. Buscar na tabela de símbolos
+    entry_t *entry = search_table_stack(stack, var_name);
+    if (!entry) { /* ... tratar erro de variável não declarada ... */ }
+
+    // 2. Determinar o registrador de base e o offset
+    char* base_reg = (is_global(stack, var_name)) ? "rbss" : "rfp"; // Você precisa de uma lógica para saber o escopo
+    int offset = entry->offset;
+    char offset_str[16];
+    sprintf(offset_str, "%d", offset);
+    
+    // 3. Gerar o código ILOC correto
+    iloc_list_t* code = new_iloc_list();
+    *result_reg = new_reg();
+    
+    // Gera: loadAI <base_reg>, <offset> => <novo_registrador>
+    append_iloc(code, make_iloc(NULL, "loadAI", base_reg, offset_str, *result_reg));
+    
     return code;
 }
 
 // Generate code for assignment
 iloc_list_t* gen_assign(const char* var_name, iloc_list_t* expr_code, char* expr_reg) {
     iloc_list_t* code = NULL;
+
+    entry_t *entry = search_table_stack(stack, var_name);
+    if (!entry) { /* ... tratar erro ... */ }
+
+    char* base_reg = (is_global(stack, var_name)) ? "rbss" : "rfp";
+    int offset = entry->offset;
+    char offset_str[16];
+    sprintf(offset_str, "%d", offset);
+
     if (expr_code) code = concat_iloc(code, expr_code);
-    append_iloc(code, make_iloc(NULL, "store", expr_reg, NULL, var_name));
+    append_iloc(code, make_iloc(NULL, "storeAI", expr_reg, base_reg, offset_str));
     return code;
 }
 
