@@ -12,7 +12,8 @@ def file_expects_compilation_error(ll_file: Path) -> bool:
     """Check if the file starts with '// Compilation Error Expected'."""
     with open(ll_file, 'r') as f:
         first_line = f.readline().strip()
-    return first_line == "// Compilation Error Expected"
+    return  first_line.startswith("//")
+    
 
 def compile_ll_to_iloc(ll_file: Path, iloc_file: Path) -> bool:
     """Compiles .ll to .iloc using ./etapa4. Returns True if successful."""
@@ -21,7 +22,7 @@ def compile_ll_to_iloc(ll_file: Path, iloc_file: Path) -> bool:
     try:
         with open(ll_file, 'r') as infile, open(iloc_file, 'w') as outfile:
             result = subprocess.run(
-                ["./etapa4"],
+                ["./etapa5"],
                 stdin=infile,
                 stdout=outfile,
                 stderr=subprocess.PIPE,
@@ -30,15 +31,15 @@ def compile_ll_to_iloc(ll_file: Path, iloc_file: Path) -> bool:
         
         if expects_error:
             if result.returncode == 0:
-                print(f"❌ FAIL (expected error, but compilation succeeded): {ll_file}")
+                #print(f"❌ FAIL (expected error, but compilation succeeded): {ll_file}")
                 return False
             else:
-                print(f"✅ PASS (expected error and got one): {ll_file}")
-                return True  # "Pass" because the error was expected
+                #print(f"✅ PASS (expected error and got one): {ll_file}")
+                return False  # "Pass" because the error was expected
         else:
             if result.returncode != 0:
-                print(f"❌ FAIL (unexpected compilation error): {ll_file}")
-                print(result.stderr)
+                #print(f"❌ FAIL (unexpected compilation error): {ll_file}")
+                #print(result.stderr)
                 return False
             return True
     except Exception as e:
@@ -80,7 +81,10 @@ def test_programs_in_folder(folder: Path, sim_args: list, keep_iloc: bool = Fals
         # Step 1: Compile .ll → .iloc
         if not compile_ll_to_iloc(ll_file, iloc_file):
             failed += 1
+            print(f"❌ COULDNT COMPILE : {ll_file}")
             continue
+        passed += 1
+        print(f"✅ COMPILED SUCCESSFULLY : {ll_file}")
         continue
         # Step 2: Run ILOC simulator
         if run_iloc_simulator(iloc_file, sim_args):
